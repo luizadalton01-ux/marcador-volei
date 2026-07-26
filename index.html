@@ -611,8 +611,16 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.34.3";
+const APP_VERSION = "3.35.1";
 const CHANGELOG = [
+  { version:"3.35.1", date:"25/07/2026", changes:[
+    "O reconhecimento de voz agora aceita variações e pequenos erros de transcrição no nome do jogador (ex: \"João\"/\"Joao\"/\"Jao\", \"Adauto\"/\"Adaltom\"), usando uma comparação aproximada em vez de exigir o nome digitado exatamente igual.",
+    "Adicionado \"largada\" como sinônimo reconhecido de \"pingada\"."
+  ]},
+  { version:"3.35.0", date:"25/07/2026", changes:[
+    "Quando um comando de voz não é reconhecido, o app agora também avisa falando em voz alta (\"Comando não reconhecido\" ou \"Não entendi o jogador\"), além da mensagem na tela.",
+    "Adicionadas variações de reconhecimento para palavras que o motor de voz costuma entender errado: \"sac\" agora também conta como \"saque\", \"eice\" como \"ace\", e \"block\" como \"bloqueio\"."
+  ]},
   { version:"3.34.3", date:"25/07/2026", changes:[
     "Adicionado diagnóstico extra do comando de voz: o app agora checa o estado real da permissão de microfone (via Permissions API) e registra no console, além de avisar sobre a possibilidade de bloqueio no nível do SISTEMA OPERACIONAL (separado da permissão do navegador/site) quando o erro \"not-allowed\" acontece mesmo com o microfone liberado no navegador."
   ]},
@@ -1825,25 +1833,61 @@ const VOICE_ACTION_PHRASES = [
   {key:'saqueErrado',  phrases:['saque errado','erro de saque']},
   {key:'passeErrado',  phrases:['passe errado','erro de passe']},
   {key:'infracao',     phrases:['infracao','falta']},
-  {key:'bloqueio',     phrases:['bloqueio','bloco']},
-  {key:'pingada',      phrases:['pingada','larga']},
-  {key:'ace',          phrases:['ace']},
+  {key:'bloqueio',     phrases:['bloqueio','bloco','block']},
+  {key:'pingada',      phrases:['pingada','larga','largada']},
+  {key:'ace',          phrases:['ace','eice']},
   {key:'ataqueCerto',  phrases:['ataque certo','ataque']},
-  {key:'saqueCerto',   phrases:['saque certo','saque']},
+  {key:'saqueCerto',   phrases:['saque certo','saque','sac']},
 ];
 
+// distância de edição (Levenshtein) — usada para aceitar variações de fala/
+// transcrição parecidas com o nome do jogador (ex: "joao"/"jao", "adauto"/"adaltom")
+function levenshteinDistance(a, b){
+  const m = a.length, n = b.length;
+  if(m===0) return n;
+  if(n===0) return m;
+  const dp = new Array(n+1);
+  for(let j=0;j<=n;j++) dp[j] = j;
+  for(let i=1;i<=m;i++){
+    let prevDiag = dp[0];
+    dp[0] = i;
+    for(let j=1;j<=n;j++){
+      const temp = dp[j];
+      dp[j] = a[i-1]===b[j-1] ? prevDiag : 1 + Math.min(prevDiag, dp[j], dp[j-1]);
+      prevDiag = temp;
+    }
+  }
+  return dp[n];
+}
+
 function findPlayerByVoiceName(text){
-  let best = null;
+  const words = text.split(/\s+/).filter(w=>w.length>=2);
+  let best = null; // {player, team, dist, nameLen}
+
   [slotTeam('A'), slotTeam('B')].forEach((teamObj, idx)=>{
     if(!teamObj) return;
     const slot = idx===0 ? 'A' : 'B';
     teamObj.players.forEach(p=>{
       const pname = normalizeVoiceText(p.name).trim();
-      if(pname.length>=2 && text.includes(pname)){
-        if(!best || pname.length > best.nameLen){
-          best = {player:p, team:slot, nameLen:pname.length};
+      if(pname.length<2) return;
+
+      // 1) correspondência exata (substring) — a mais confiável
+      if(text.includes(pname)){
+        if(!best || best.dist>0 || pname.length > best.nameLen){
+          best = {player:p, team:slot, dist:0, nameLen:pname.length};
         }
+        return;
       }
+
+      // 2) correspondência aproximada, palavra por palavra da fala,
+      // tolerando variações de pronúncia/transcrição do nome
+      words.forEach(w=>{
+        const dist = levenshteinDistance(w, pname);
+        const threshold = Math.max(1, Math.floor(pname.length/3));
+        if(dist <= threshold && (!best || dist < best.dist)){
+          best = {player:p, team:slot, dist, nameLen:pname.length};
+        }
+      });
     });
   });
   return best;
@@ -1866,11 +1910,13 @@ function processVoiceCommand(rawText){
   const actionMatch = VOICE_ACTION_PHRASES.find(a => a.phrases.some(ph => text.includes(ph)));
   if(!actionMatch){
     showToast('Comando de voz não reconhecido: "' + rawText + '"');
+    speak('Comando não reconhecido.');
     return;
   }
   const found = findPlayerByVoiceName(text);
   if(!found){
     showToast('Não entendi o jogador em: "' + rawText + '"');
+    speak('Não entendi o jogador.');
     return;
   }
   applyAction(found.team, found.player, actionMatch.key);
