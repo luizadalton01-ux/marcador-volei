@@ -611,8 +611,12 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.37.2";
+const APP_VERSION = "3.38.0";
 const CHANGELOG = [
+  { version:"3.38.0", date:"25/07/2026", changes:[
+    "Revertida de novo a tentativa de \"esperar pelo resto da fala\" (quebrava o reconhecimento) — voltou a processar cada fala assim que chega, sem nenhum atraso.",
+    "Em vez disso, adicionadas variações de transcrição da palavra \"erro\": \"err\", \"erru\", \"ero\" e \"eru\" agora são reconhecidas como \"erro\" em qualquer comando (erro saque, erro ataque, erro passe)."
+  ]},
   { version:"3.37.2", date:"25/07/2026", changes:[
     "Nova tentativa de corrigir comandos cortados por pausa (ex: \"Erro\" separado de \"saque João\"), de um jeito mais cuidadoso desta vez: o app só espera um instante quando o pedaço reconhecido vem muito curto (uma palavra só, tipo \"Erro\" sozinho); comandos que já chegam completos continuam sendo processados na hora, sem atraso."
   ]},
@@ -1844,6 +1848,12 @@ function normalizeVoiceText(str){
     .normalize('NFD').replace(/[\u0300-\u036f]/g,''); // remove acentos
 }
 
+// converte variações de transcrição de "erro" (err, erru, ero, eru...) para a
+// forma canônica "erro", pra funcionar com todas as frases já cadastradas
+function applyVoiceSynonyms(text){
+  return text.replace(/\b(err|erru|ero|eru|erro)\b/g, 'erro');
+}
+
 // ordem importa: frases mais específicas primeiro, para não confundir
 // "ataque errado" com "ataque", "saque errado" com "saque" etc.
 const VOICE_ACTION_PHRASES = [
@@ -1925,7 +1935,7 @@ function findPlayerByVoiceName(text){
 }
 
 function processVoiceCommand(rawText){
-  const text = normalizeVoiceText(rawText);
+  const text = applyVoiceSynonyms(normalizeVoiceText(rawText));
 
   // ignora silenciosamente falas que não começam com uma palavra de comando
   // reconhecida (conversas de fundo, ruído etc. não geram aviso nenhum)
@@ -2002,31 +2012,8 @@ function startVoiceCommand(){
 
   voiceRecognition.onresult = (e)=>{
     const last = e.results[e.results.length-1];
-    if(!last || !last.isFinal) return;
-    const transcript = last[0].transcript;
-    const wordCount = transcript.trim().split(/\s+/).filter(Boolean).length;
-
-    if(voiceBufferTimer){ clearTimeout(voiceBufferTimer); voiceBufferTimer = null; }
-
-    if(voiceBuffer){
-      // já tinha um pedaço curto pendente (ex: "Erro") — junta com o que veio agora e processa
-      const full = voiceBuffer + ' ' + transcript;
-      voiceBuffer = '';
-      processVoiceCommand(full);
-      return;
-    }
-
-    if(wordCount <= 1){
-      // pode ser só o começo do comando cortado por uma pausa (ex: "Erro" sozinho) —
-      // espera um instante pelo resto antes de decidir que não veio mais nada
-      voiceBuffer = transcript;
-      voiceBufferTimer = setTimeout(()=>{
-        const full = voiceBuffer;
-        voiceBuffer = '';
-        voiceBufferTimer = null;
-        processVoiceCommand(full);
-      }, 900);
-    } else {
+    if(last && last.isFinal){
+      const transcript = last[0].transcript;
       processVoiceCommand(transcript);
     }
   };
