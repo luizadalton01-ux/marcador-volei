@@ -611,8 +611,13 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.38.0";
+const APP_VERSION = "3.38.1";
 const CHANGELOG = [
+  { version:"3.38.1", date:"25/07/2026", changes:[
+    "Corrigido: \"Sac erro\" (saque abreviado antes de erro) estava sendo reconhecido só como \"Saque\" normal, ignorando o erro. Agora funciona nas duas ordens (\"erro saque\"/\"saque erro\"), incluindo com a abreviação \"sac\".",
+    "Adicionadas variações de \"passe\": \"paz\", \"pass\", \"passi\" e \"pasi\" agora contam como \"passe\" em qualquer comando.",
+    "Corrigido também: comandos começando direto com \"Passe\" (sem o \"Erro\" na frente) não eram reconhecidos porque essa palavra nem estava na lista de gatilhos — agora está."
+  ]},
   { version:"3.38.0", date:"25/07/2026", changes:[
     "Revertida de novo a tentativa de \"esperar pelo resto da fala\" (quebrava o reconhecimento) — voltou a processar cada fala assim que chega, sem nenhum atraso.",
     "Em vez disso, adicionadas variações de transcrição da palavra \"erro\": \"err\", \"erru\", \"ero\" e \"eru\" agora são reconhecidas como \"erro\" em qualquer comando (erro saque, erro ataque, erro passe)."
@@ -1848,18 +1853,21 @@ function normalizeVoiceText(str){
     .normalize('NFD').replace(/[\u0300-\u036f]/g,''); // remove acentos
 }
 
-// converte variações de transcrição de "erro" (err, erru, ero, eru...) para a
-// forma canônica "erro", pra funcionar com todas as frases já cadastradas
+// converte variações de transcrição para a forma canônica de cada palavra,
+// pra funcionar com todas as frases já cadastradas sem precisar duplicá-las
 function applyVoiceSynonyms(text){
-  return text.replace(/\b(err|erru|ero|eru|erro)\b/g, 'erro');
+  text = text.replace(/\b(err|erru|ero|eru|erro)\b/g, 'erro');
+  text = text.replace(/\b(sac|saque)\b/g, 'saque');
+  text = text.replace(/\b(paz|pass|passi|pasi|passe)\b/g, 'passe');
+  return text;
 }
 
 // ordem importa: frases mais específicas primeiro, para não confundir
 // "ataque errado" com "ataque", "saque errado" com "saque" etc.
 const VOICE_ACTION_PHRASES = [
-  {key:'ataqueErrado', phrases:['ataque errado','erro de ataque','erro ataque']},
-  {key:'saqueErrado',  phrases:['saque errado','erro de saque','erro saque']},
-  {key:'passeErrado',  phrases:['passe errado','erro de passe','erro passe']},
+  {key:'ataqueErrado', phrases:['ataque errado','erro de ataque','erro ataque','ataque erro']},
+  {key:'saqueErrado',  phrases:['saque errado','erro de saque','erro saque','saque erro']},
+  {key:'passeErrado',  phrases:['passe errado','erro de passe','erro passe','passe erro']},
   {key:'infracao',     phrases:['infracao','falta']},
   {key:'bloqueio',     phrases:['bloqueio','bloco','block']},
   {key:'pingada',      phrases:['pingada','larga','largada','pingar','pingo','pigada']},
@@ -1870,7 +1878,7 @@ const VOICE_ACTION_PHRASES = [
 
 // só processa a fala como comando se ela começar com uma dessas palavras
 // (ou uma variação parecida) — evita reagir a conversas/ruído de fundo
-const VOICE_TRIGGER_WORDS = ['saque','sac','ataque','pingada','larga','largada','pingar','pingo','pigada','bloqueio','bloco','block','infracao','falta','eice','ace','eis','esse','ici','issi','ei','ah','desfazer','erro','ponto'];
+const VOICE_TRIGGER_WORDS = ['saque','sac','ataque','pingada','larga','largada','pingar','pingo','pigada','bloqueio','bloco','block','infracao','falta','eice','ace','eis','esse','ici','issi','ei','ah','desfazer','erro','ponto','passe','paz','pass','passi','pasi'];
 function startsWithVoiceTrigger(text){
   const firstWord = (text.split(/\s+/)[0] || '').trim();
   if(!firstWord) return false;
