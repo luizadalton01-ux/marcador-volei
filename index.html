@@ -611,8 +611,14 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.35.1";
+const APP_VERSION = "3.36.0";
 const CHANGELOG = [
+  { version:"3.36.0", date:"25/07/2026", changes:[
+    "Adicionado o comando de voz \"Desfazer\" (funciona igual ao botão).",
+    "O app agora só reage a falas que COMEÇAM com uma palavra de comando reconhecida (Saque, Ataque, Pingada, Bloqueio, Infração, Eice, Desfazer, Largada, Erro, Ponto, e variações parecidas) — conversas de fundo e outras falas deixam de disparar avisos de \"comando não reconhecido\".",
+    "Adicionadas mais variações para o comando de Ace (eis, aice, ecis, ei si, eici), já que ele não estava sendo reconhecido em algumas transcrições.",
+    "Adicionadas as formas curtas \"erro ataque\", \"erro saque\" e \"erro passe\" (sem o \"de\") como sinônimos dos respectivos erros."
+  ]},
   { version:"3.35.1", date:"25/07/2026", changes:[
     "O reconhecimento de voz agora aceita variações e pequenos erros de transcrição no nome do jogador (ex: \"João\"/\"Joao\"/\"Jao\", \"Adauto\"/\"Adaltom\"), usando uma comparação aproximada em vez de exigir o nome digitado exatamente igual.",
     "Adicionado \"largada\" como sinônimo reconhecido de \"pingada\"."
@@ -1829,16 +1835,29 @@ function normalizeVoiceText(str){
 // ordem importa: frases mais específicas primeiro, para não confundir
 // "ataque errado" com "ataque", "saque errado" com "saque" etc.
 const VOICE_ACTION_PHRASES = [
-  {key:'ataqueErrado', phrases:['ataque errado','erro de ataque']},
-  {key:'saqueErrado',  phrases:['saque errado','erro de saque']},
-  {key:'passeErrado',  phrases:['passe errado','erro de passe']},
+  {key:'ataqueErrado', phrases:['ataque errado','erro de ataque','erro ataque']},
+  {key:'saqueErrado',  phrases:['saque errado','erro de saque','erro saque']},
+  {key:'passeErrado',  phrases:['passe errado','erro de passe','erro passe']},
   {key:'infracao',     phrases:['infracao','falta']},
   {key:'bloqueio',     phrases:['bloqueio','bloco','block']},
   {key:'pingada',      phrases:['pingada','larga','largada']},
-  {key:'ace',          phrases:['ace','eice']},
+  {key:'ace',          phrases:['ace','eice','eis','aice','ecis','ei si','eici']},
   {key:'ataqueCerto',  phrases:['ataque certo','ataque']},
   {key:'saqueCerto',   phrases:['saque certo','saque','sac']},
 ];
+
+// só processa a fala como comando se ela começar com uma dessas palavras
+// (ou uma variação parecida) — evita reagir a conversas/ruído de fundo
+const VOICE_TRIGGER_WORDS = ['saque','sac','ataque','pingada','larga','largada','bloqueio','bloco','block','infracao','falta','eice','ace','eis','desfazer','erro','ponto'];
+function startsWithVoiceTrigger(text){
+  const firstWord = (text.split(/\s+/)[0] || '').trim();
+  if(!firstWord) return false;
+  return VOICE_TRIGGER_WORDS.some(trig=>{
+    if(firstWord===trig || firstWord.startsWith(trig) || trig.startsWith(firstWord)) return true;
+    const threshold = Math.max(1, Math.floor(trig.length/3));
+    return levenshteinDistance(firstWord, trig) <= threshold;
+  });
+}
 
 // distância de edição (Levenshtein) — usada para aceitar variações de fala/
 // transcrição parecidas com o nome do jogador (ex: "joao"/"jao", "adauto"/"adaltom")
@@ -1896,8 +1915,18 @@ function findPlayerByVoiceName(text){
 function processVoiceCommand(rawText){
   const text = normalizeVoiceText(rawText);
 
+  // ignora silenciosamente falas que não começam com uma palavra de comando
+  // reconhecida (conversas de fundo, ruído etc. não geram aviso nenhum)
+  if(!startsWithVoiceTrigger(text)) return;
+
+  // "desfazer"
+  if(text.startsWith('desfazer') || levenshteinDistance(text.split(/\s+/)[0]||'', 'desfazer') <= 2){
+    performUndo();
+    return;
+  }
+
   // "ponto direto time 1 / time 2"
-  if(text.includes('ponto direto')){
+  if(text.includes('ponto')){
     const teamA = slotTeam('A'), teamB = slotTeam('B');
     if(teamA && text.includes(normalizeVoiceText(teamDisplayName(teamA)))){
       quickPoint('A'); showToast('Comando de voz: ponto direto ' + teamDisplayName(teamA)); return;
@@ -2224,23 +2253,32 @@ document.body.addEventListener('click', (e)=>{
 });
 
 /* ---------------- undo / reset / end ---------------- */
-$('#btnUndo').addEventListener('click', ()=>{
-  if(undoStack.length===0) return;
+function performUndo(){
+  if(undoStack.length===0){
+    showToast('Não há nada para desfazer.');
+    return false;
+  }
   redoStack.push(clone(state));
   state = undoStack.pop();
   markDirty();
   speak('Desfazer');
   renderAll();
-});
-
-$('#btnRedo').addEventListener('click', ()=>{
-  if(redoStack.length===0) return;
+  return true;
+}
+function performRedo(){
+  if(redoStack.length===0){
+    showToast('Não há nada para refazer.');
+    return false;
+  }
   undoStack.push(clone(state));
   state = redoStack.pop();
   markDirty();
   speak('Refazer');
   renderAll();
-});
+  return true;
+}
+$('#btnUndo').addEventListener('click', performUndo);
+$('#btnRedo').addEventListener('click', performRedo);
 
 $('#btnEndSet').addEventListener('click', showEndSetDialog);
 
