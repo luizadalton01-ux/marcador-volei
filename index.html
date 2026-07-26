@@ -611,8 +611,11 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.37.0";
+const APP_VERSION = "3.37.1";
 const CHANGELOG = [
+  { version:"3.37.1", date:"25/07/2026", changes:[
+    "Revertida a mudança do \"buffer de fala\" da versão anterior (v3.37.0), que fez o comando de voz parar de reconhecer qualquer comando. Voltou a processar cada fala assim que é reconhecida, como antes."
+  ]},
   { version:"3.37.0", date:"25/07/2026", changes:[
     "Corrigido: comandos de voz com pausa no meio (ex: \"Erro\" ... \"ataque João\") podiam ser reconhecidos como dois comandos separados, fazendo o \"Erro\" ser descartado e o restante virar um comando diferente do pretendido (ex: um \"Ataque\" normal em vez de \"Ataque errado\"). Agora o app aguarda cerca de 1 segundo juntando pedaços de fala próximos antes de interpretar o comando completo."
   ]},
@@ -1998,17 +2001,7 @@ function startVoiceCommand(){
     const last = e.results[e.results.length-1];
     if(last && last.isFinal){
       const transcript = last[0].transcript;
-      // junta pedaços de fala ditos com uma pausa curta entre eles (ex: "Erro"
-      // seguido de "ataque João" alguns instantes depois) antes de interpretar,
-      // pra não perder o começo do comando nem confundir com outro comando
-      voiceBuffer = voiceBuffer ? (voiceBuffer + ' ' + transcript) : transcript;
-      if(voiceBufferTimer) clearTimeout(voiceBufferTimer);
-      voiceBufferTimer = setTimeout(()=>{
-        const full = voiceBuffer;
-        voiceBuffer = '';
-        voiceBufferTimer = null;
-        processVoiceCommand(full);
-      }, 1100);
+      processVoiceCommand(transcript);
     }
   };
   voiceRecognition.onerror = (e)=>{
