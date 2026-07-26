@@ -611,8 +611,11 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.36.0";
+const APP_VERSION = "3.36.1";
 const CHANGELOG = [
+  { version:"3.36.1", date:"25/07/2026", changes:[
+    "Adicionadas mais variações reconhecidas: \"pingar\", \"pingo\" e \"pigada\" para Pingada; \"ei se\", \"esse\", \"ici\", \"ah ci\" e \"issi\" para Ace."
+  ]},
   { version:"3.36.0", date:"25/07/2026", changes:[
     "Adicionado o comando de voz \"Desfazer\" (funciona igual ao botão).",
     "O app agora só reage a falas que COMEÇAM com uma palavra de comando reconhecida (Saque, Ataque, Pingada, Bloqueio, Infração, Eice, Desfazer, Largada, Erro, Ponto, e variações parecidas) — conversas de fundo e outras falas deixam de disparar avisos de \"comando não reconhecido\".",
@@ -1840,15 +1843,15 @@ const VOICE_ACTION_PHRASES = [
   {key:'passeErrado',  phrases:['passe errado','erro de passe','erro passe']},
   {key:'infracao',     phrases:['infracao','falta']},
   {key:'bloqueio',     phrases:['bloqueio','bloco','block']},
-  {key:'pingada',      phrases:['pingada','larga','largada']},
-  {key:'ace',          phrases:['ace','eice','eis','aice','ecis','ei si','eici']},
+  {key:'pingada',      phrases:['pingada','larga','largada','pingar','pingo','pigada']},
+  {key:'ace',          phrases:['ace','eice','eis','aice','ecis','ei si','eici','ei se','esse','ici','ah ci','issi']},
   {key:'ataqueCerto',  phrases:['ataque certo','ataque']},
   {key:'saqueCerto',   phrases:['saque certo','saque','sac']},
 ];
 
 // só processa a fala como comando se ela começar com uma dessas palavras
 // (ou uma variação parecida) — evita reagir a conversas/ruído de fundo
-const VOICE_TRIGGER_WORDS = ['saque','sac','ataque','pingada','larga','largada','bloqueio','bloco','block','infracao','falta','eice','ace','eis','desfazer','erro','ponto'];
+const VOICE_TRIGGER_WORDS = ['saque','sac','ataque','pingada','larga','largada','pingar','pingo','pigada','bloqueio','bloco','block','infracao','falta','eice','ace','eis','esse','ici','issi','ei','ah','desfazer','erro','ponto'];
 function startsWithVoiceTrigger(text){
   const firstWord = (text.split(/\s+/)[0] || '').trim();
   if(!firstWord) return false;
