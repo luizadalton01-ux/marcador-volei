@@ -611,8 +611,11 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.37.1";
+const APP_VERSION = "3.37.2";
 const CHANGELOG = [
+  { version:"3.37.2", date:"25/07/2026", changes:[
+    "Nova tentativa de corrigir comandos cortados por pausa (ex: \"Erro\" separado de \"saque João\"), de um jeito mais cuidadoso desta vez: o app só espera um instante quando o pedaço reconhecido vem muito curto (uma palavra só, tipo \"Erro\" sozinho); comandos que já chegam completos continuam sendo processados na hora, sem atraso."
+  ]},
   { version:"3.37.1", date:"25/07/2026", changes:[
     "Revertida a mudança do \"buffer de fala\" da versão anterior (v3.37.0), que fez o comando de voz parar de reconhecer qualquer comando. Voltou a processar cada fala assim que é reconhecida, como antes."
   ]},
@@ -1999,8 +2002,31 @@ function startVoiceCommand(){
 
   voiceRecognition.onresult = (e)=>{
     const last = e.results[e.results.length-1];
-    if(last && last.isFinal){
-      const transcript = last[0].transcript;
+    if(!last || !last.isFinal) return;
+    const transcript = last[0].transcript;
+    const wordCount = transcript.trim().split(/\s+/).filter(Boolean).length;
+
+    if(voiceBufferTimer){ clearTimeout(voiceBufferTimer); voiceBufferTimer = null; }
+
+    if(voiceBuffer){
+      // já tinha um pedaço curto pendente (ex: "Erro") — junta com o que veio agora e processa
+      const full = voiceBuffer + ' ' + transcript;
+      voiceBuffer = '';
+      processVoiceCommand(full);
+      return;
+    }
+
+    if(wordCount <= 1){
+      // pode ser só o começo do comando cortado por uma pausa (ex: "Erro" sozinho) —
+      // espera um instante pelo resto antes de decidir que não veio mais nada
+      voiceBuffer = transcript;
+      voiceBufferTimer = setTimeout(()=>{
+        const full = voiceBuffer;
+        voiceBuffer = '';
+        voiceBufferTimer = null;
+        processVoiceCommand(full);
+      }, 900);
+    } else {
       processVoiceCommand(transcript);
     }
   };
