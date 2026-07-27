@@ -189,6 +189,11 @@ label.field-label{display:block; font-size:11px; text-transform:uppercase; lette
 #teamsContainer{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;}
 .team-card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; gap:4px;}
 .team-card-head h2{font-size:16px; margin:0;}
+.libero-ce-toggle{
+  display:flex; align-items:center; gap:6px; font-size:10.5px; color:var(--muted);
+  margin:0 0 8px; cursor:pointer; line-height:1.3;
+}
+.libero-ce-toggle input{width:14px; height:14px; flex-shrink:0; accent-color:var(--teamA); cursor:pointer;}
 .team-card .field-label{font-size:9px; margin:6px 0 4px;}
 .team-card .player-row{gap:4px; margin-bottom:5px;}
 .team-card .player-row input[type=text]{padding:6px 6px; font-size:11px; border-radius:7px;}
@@ -261,6 +266,13 @@ label.field-label{display:block; font-size:11px; text-transform:uppercase; lette
 .set-label{font-size:15px; color:var(--muted-2); text-transform:uppercase; letter-spacing:0.5px; font-weight:700;}
 .set-num{font-family:'Teko',sans-serif; font-size:45px; font-weight:700; line-height:1;}
 .sets-score{font-family:'JetBrains Mono',monospace; font-size:20px; color:var(--muted); margin-top:4px;}
+.action-alert{
+  margin-top:6px; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:0.3px;
+  padding:3px 6px; border-radius:6px; text-align:center; white-space:nowrap;
+}
+.action-alert.serve{background:rgba(244,199,68,0.18); color:#f4c744;}
+.action-alert.point{background:var(--good-dim); color:var(--good);}
+.action-alert.wrong{background:var(--bad-dim); color:var(--bad);}
 
 /* ===== Tabs ===== */
 .tabs{display:flex; margin:14px 12px 0; background:var(--bg-elev); border:1px solid var(--line); border-radius:12px; padding:3px;}
@@ -379,8 +391,8 @@ table.stats-table tr:last-child td{border-bottom:none;}
   flex:1; padding:11px 4px; border-radius:12px; border:1px solid var(--line); background:var(--bg-elev-2);
   color:var(--text); font-weight:700; font-size:12.5px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; text-align:center;
 }
-.bar-btn.undo{color:var(--muted);}
-.bar-btn.redo{color:var(--muted);}
+.bar-btn.undo{background:var(--bad-dim); border-color:rgba(229,86,106,0.45); color:var(--bad);}
+.bar-btn.redo{background:rgba(244,199,68,0.16); border-color:rgba(244,199,68,0.5); color:#f4c744;}
 .bar-btn.primary{background:var(--good-dim); border-color:rgba(55,201,138,0.4); color:var(--good);}
 .bar-btn:active{transform:scale(0.97);}
 .bar-btn:disabled{opacity:0.35;}
@@ -544,6 +556,7 @@ table.stats-table tr:last-child td{border-bottom:none;}
       <div class="score-mid">
         <div class="set-label">Set</div>
         <div class="set-num" id="mSetNum">1</div>
+        <div class="action-alert" id="actionAlert"></div>
       </div>
       <div class="score-side b">
         <div class="score-name" id="mNameB">TIME 2</div>
@@ -611,8 +624,38 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.38.1";
+const APP_VERSION = "3.40.5";
 const CHANGELOG = [
+  { version:"3.40.5", date:"25/07/2026", changes:[
+    "Tentativa de correção da narração parando de funcionar em celulares: revisei o código das versões anteriores e não encontrei nenhuma mudança funcional que devesse afetar a narração — é provável que seja um bug conhecido do motor de voz do Chrome/Android, que pode \"travar\" silenciosamente depois de cancelar/falar em sequência rápida, ou depois da tela bloquear. Adicionadas três proteções: pequena pausa entre cancelar e iniciar a fala, reset automático do motor de voz ao voltar pro app, e uma chamada periódica de \"resume\" para evitar que ele \"durma\"."
+  ]},
+  { version:"3.40.4", date:"25/07/2026", changes:[
+    "Botão \"Refazer\" destacado em amarelo."
+  ]},
+  { version:"3.40.3", date:"25/07/2026", changes:[
+    "Botão \"Desfazer\" destacado em vermelho."
+  ]},
+  { version:"3.40.2", date:"25/07/2026", changes:[
+    "Corrigido: a mensagem de erro (ex: \"Ace só pode ser marcado para quem sacou\") ficava presa na tela mesmo depois de você corrigir e marcar certo. Agora ela some automaticamente assim que um ponto é marcado corretamente com o saque confirmado."
+  ]},
+  { version:"3.40.1", date:"25/07/2026", changes:[
+    "Adicionada a regra: o ponto de \"Ace\" só pode ser marcado para o jogador que sacou. Se for marcado para outro jogador, a marcação é bloqueada e o app avisa (mensagem + voz) qual jogador fez o saque."
+  ]},
+  { version:"3.40.0", date:"25/07/2026", changes:[
+    "Adicionada a opção \"Líbero saca no lugar do Central (CE não saca)\" — um checkbox ao lado do nome de cada time na aba Nova Partida. Quando ativada, toda vez que chegaria a vez do Central sacar, o rodízio passa a vez pro Líbero, que acaba sacando duas vezes no ciclo completo."
+  ]},
+  { version:"3.39.2", date:"25/07/2026", changes:[
+    "Adicionada a opção \"—\" (sem posição) no menu de posição dos 6 primeiros jogadores, permitindo esvaziar temporariamente a posição de um jogador para poder trocá-la com outro.",
+    "Os 6 primeiros jogadores agora são reordenados automaticamente para sempre seguir a sequência LE, P1, CE, OP, P2, LI, inclusive depois de uma troca de posição entre dois jogadores."
+  ]},
+  { version:"3.39.1", date:"25/07/2026", changes:[
+    "Na formação do elenco (aba Nova Partida), os 6 primeiros jogadores de cada time agora só podem escolher posições (LE, P1, CE, OP, P2, LI) ainda não usadas pelos outros dos 6 primeiros — sem repetição entre eles. A partir do 7º jogador, todas as posições continuam disponíveis livremente, podendo repetir."
+  ]},
+  { version:"3.39.0", date:"25/07/2026", changes:[
+    "Adicionado comando de voz \"Placar\" — o app fala em voz alta o placar atual dos dois times.",
+    "Adicionado comando de voz \"Última marcação\" (ou \"qual foi a última marcação\", \"último histórico\" e variações) — o app fala a última jogada registrada.",
+    "Adicionado um alerta no bloco central do placar (abaixo do número do set) indicando a ação esperada: \"Marcar saque\" em amarelo, \"Marcar ponto\" em verde, ou \"Marcação incorreta\" em vermelho quando há algum erro de marcação pendente."
+  ]},
   { version:"3.38.1", date:"25/07/2026", changes:[
     "Corrigido: \"Sac erro\" (saque abreviado antes de erro) estava sendo reconhecido só como \"Saque\" normal, ignorando o erro. Agora funciona nas duas ordens (\"erro saque\"/\"saque erro\"), incluindo com a abreviação \"sac\".",
     "Adicionadas variações de \"passe\": \"paz\", \"pass\", \"passi\" e \"pasi\" agora contam como \"passe\" em qualquer comando.",
@@ -930,6 +973,7 @@ function newTeam(name){
   return {
     id:uid(),
     name:name||"",
+    liberoServesForCE:false, // se ativado, o LI saca no lugar do CE (LI saca 2x no rodízio)
     players:[newPlayer("","LE"), newPlayer("","P1"), newPlayer("","CE"), newPlayer("","OP"), newPlayer("","P2"), newPlayer("","LI")]
   };
 }
@@ -954,6 +998,13 @@ function teamDisplayName(team){
    adversário: toda vez que o time reconquista o saque (side-out a
    favor dele), avança uma posição — ex: depois que o Levantador (LE)
    sacou, a próxima vez que o MESMO time sacar será com o P1. */
+function positionForRotationSlot(teamObj, idx){
+  let pos = POSITIONS[idx];
+  if(pos==='CE' && teamObj && teamObj.liberoServesForCE){
+    pos = 'LI'; // CE não saca — o Líbero saca no lugar dele (LI saca 2x no rodízio)
+  }
+  return pos;
+}
 function assignServerForRotation(team){
   const startedKey = team==='A' ? 'rotationStartedA' : 'rotationStartedB';
   const idxKey = team==='A' ? 'rotationIndexA' : 'rotationIndexB';
@@ -962,8 +1013,8 @@ function assignServerForRotation(team){
   } else {
     state[startedKey] = true; // primeira vez sacando neste set — começa no Levantador (LE)
   }
-  const pos = POSITIONS[state[idxKey]];
   const teamObj = slotTeam(team);
+  const pos = positionForRotationSlot(teamObj, state[idxKey]);
   const player = teamObj ? teamObj.players.find(p=>p.pos===pos) : null;
   if(player) state.servingPlayerId = player.id;
   state.serveConfirmed = false; // ainda não confirmado — precisa marcar o saque
@@ -1084,22 +1135,48 @@ function migrateState(loaded){
   delete loaded.rotationIndex;
   delete loaded.rotationServedA;
   delete loaded.rotationServedB;
+  if(Array.isArray(loaded.teams)){
+    loaded.teams.forEach(t=>{ if(t.liberoServesForCE === undefined) t.liberoServesForCE = false; });
+  }
 }
 
 /* ---------------- setup screen ---------------- */
+function reorderFirstSixByPosition(players){
+  const first6 = players.slice(0,6);
+  const rest = players.slice(6);
+  first6.sort((a,b)=>{
+    const ia = a.pos ? POSITIONS.indexOf(a.pos) : 999;
+    const ib = b.pos ? POSITIONS.indexOf(b.pos) : 999;
+    return ia - ib;
+  });
+  return first6.concat(rest);
+}
+
 function renderRosterFor(teamId){
   const wrap = $('.roster-wrap[data-team-id="'+teamId+'"]');
   if(!wrap) return;
   wrap.innerHTML = '';
   const team = teamBy(teamId);
+  // mantém sempre a ordem LE, P1, CE, OP, P2, LI entre os 6 primeiros
+  team.players = reorderFirstSixByPosition(team.players);
   const players = team.players;
+
+  // as posições dos 6 primeiros jogadores não podem se repetir entre si (fora "sem posição");
+  // a partir do 7º jogador, qualquer posição pode ser escolhida livremente
+  const usedByFirstSix = players.slice(0,6).map(p=>p.pos).filter(pos=>pos);
+
   players.forEach((p, idx)=>{
     const row = document.createElement('div');
     row.className = 'player-row';
+    const posOptions = idx < 6
+      ? POSITIONS.filter(pos => pos===p.pos || !usedByFirstSix.includes(pos))
+      : POSITIONS;
+    const emptyOption = idx < 6 ? `<option value="" ${p.pos?'':'selected'}>—</option>` : '';
     row.innerHTML = `
       <input type="text" maxlength="16" placeholder="Nome do jogador" value="${escapeHtml(p.name)}" data-idx="${idx}" data-team-id="${teamId}" class="pname-input">
       <select data-idx="${idx}" data-team-id="${teamId}" class="ppos-select">
-        ${POSITIONS.map(pos=>`<option value="${pos}" ${pos===p.pos?'selected':''}>${pos}</option>`).join('')}
+        ${emptyOption}
+        ${posOptions.map(pos=>`<option value="${pos}" ${pos===p.pos?'selected':''}>${pos}</option>`).join('')}
       </select>
       <button class="rm-btn" data-idx="${idx}" data-team-id="${teamId}">×</button>
     `;
@@ -1115,7 +1192,9 @@ function renderRosterFor(teamId){
   $$('.ppos-select', wrap).forEach(sel=>{
     sel.addEventListener('change', e=>{
       const i = +e.target.dataset.idx;
-      teamBy(e.target.dataset.teamId).players[i].pos = e.target.value;
+      const tId = e.target.dataset.teamId;
+      teamBy(tId).players[i].pos = e.target.value;
+      renderRosterFor(tId); // reordena e atualiza as opções disponíveis dos outros jogadores
     });
   });
   $$('.rm-btn', wrap).forEach(btn=>{
@@ -1140,12 +1219,22 @@ function renderTeamsSetup(){
         <h2 style="color:${TEAM_PALETTE[idx % TEAM_PALETTE.length]}">Time ${idx+1}</h2>
         ${state.teams.length>2 ? `<button class="rm-team-btn" data-team-id="${team.id}">Excluir time</button>` : ''}
       </div>
+      <label class="libero-ce-toggle">
+        <input type="checkbox" class="libero-ce-checkbox" data-team-id="${team.id}" ${team.liberoServesForCE?'checked':''}>
+        Líbero saca no lugar do Central (CE não saca)
+      </label>
       <label class="field-label">Elenco</label>
       <div class="roster-wrap" data-team-id="${team.id}"></div>
       <button class="add-player-btn add-player-btn-team" data-team-id="${team.id}">+ adicionar jogador</button>
     `;
     wrap.appendChild(card);
     renderRosterFor(team.id);
+  });
+
+  $$('.libero-ce-checkbox', wrap).forEach(chk=>{
+    chk.addEventListener('change', e=>{
+      teamBy(e.target.dataset.teamId).liberoServesForCE = e.target.checked;
+    });
   });
 }
 
@@ -1321,7 +1410,7 @@ function expectedServerForTeam(team){
     if(marked) return marked;
   }
   const idx = team==='A' ? state.rotationIndexA : state.rotationIndexB;
-  const pos = POSITIONS[idx];
+  const pos = positionForRotationSlot(teamObj, idx);
   return teamObj.players.find(p=>p.pos===pos) || null;
 }
 
@@ -1343,6 +1432,20 @@ function renderScoreboard(){
   $('#mScoreA').innerHTML = state.score.A + '<span class="serve-dot '+(servingNowA?'':'hidden')+'" id="serveDotA">🏐</span>';
   $('#mScoreB').innerHTML = '<span class="serve-dot '+(servingNowB?'':'hidden')+'" id="serveDotB">🏐</span>' + state.score.B;
   $('#mSetNum').textContent = state.setNum;
+
+  const alertEl = $('#actionAlert');
+  if(alertEl){
+    if(state.errorMessage){
+      alertEl.textContent = 'Marcação incorreta';
+      alertEl.className = 'action-alert wrong';
+    } else if(!state.serveConfirmed){
+      alertEl.textContent = 'Marcar saque';
+      alertEl.className = 'action-alert serve';
+    } else {
+      alertEl.textContent = 'Marcar ponto';
+      alertEl.className = 'action-alert point';
+    }
+  }
 }
 
 function totalPointsFor(p){
@@ -1825,23 +1928,48 @@ function speak(text){
   if(!speechEnabled) return;
   try{
     if('speechSynthesis' in window){
-      window.speechSynthesis.cancel(); // evita fila/atraso em toques rápidos seguidos
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = 'pt-BR';
-      utter.rate = 1.05;
-      // pausa o comando de voz enquanto o app fala, para o microfone não
-      // "escutar" a própria narração e disparar uma marcação por engano
-      if(voiceListening && voiceRecognition){
-        suppressVoiceRestart = true;
-        try{ voiceRecognition.stop(); }catch(e){ /* ignore */ }
-        utter.onend = ()=>{
-          suppressVoiceRestart = false;
-          if(voiceListening){ try{ voiceRecognition.start(); }catch(e){ /* ignore */ } }
-        };
-      }
-      window.speechSynthesis.speak(utter);
+      const synth = window.speechSynthesis;
+      synth.cancel(); // evita fila/atraso em toques rápidos seguidos
+      const doSpeak = ()=>{
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'pt-BR';
+        utter.rate = 1.05;
+        // pausa o comando de voz enquanto o app fala, para o microfone não
+        // "escutar" a própria narração e disparar uma marcação por engano
+        if(voiceListening && voiceRecognition){
+          suppressVoiceRestart = true;
+          try{ voiceRecognition.stop(); }catch(e){ /* ignore */ }
+          utter.onend = ()=>{
+            suppressVoiceRestart = false;
+            if(voiceListening){ try{ voiceRecognition.start(); }catch(e){ /* ignore */ } }
+          };
+        }
+        synth.speak(utter);
+      };
+      // pequena espera entre "cancel" e "speak": em muitos navegadores de
+      // celular (principalmente Chrome/Android), chamar os dois colados na
+      // mesma execução faz a narração parar de funcionar silenciosamente
+      setTimeout(doSpeak, 60);
     }
   }catch(e){ console.error('Falha na narração por voz:', e); }
+}
+
+// alguns navegadores de celular "travam" o motor de narração depois que a
+// tela é bloqueada ou o app fica em segundo plano — resetar ao voltar ajuda
+// a evitar que a narração pare de funcionar sem nenhum aviso
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible' && 'speechSynthesis' in window){
+    try{ window.speechSynthesis.cancel(); }catch(e){ /* ignore */ }
+  }
+});
+
+// bug conhecido em Chrome/Android: o motor de narração "dorme" depois de um
+// tempo parado e para de falar sem avisar nada — chamar resume() de tempos
+// em tempos evita isso
+if('speechSynthesis' in window){
+  setInterval(()=>{
+    try{ window.speechSynthesis.resume(); }catch(e){ /* ignore */ }
+  }, 5000);
 }
 
 /* ---------------- comando de voz para marcar pontos/saque -----------------
@@ -1942,8 +2070,37 @@ function findPlayerByVoiceName(text){
   return best;
 }
 
+function speakScoreCommand(){
+  const a = slotTeam('A'), b = slotTeam('B');
+  const msg = 'Placar: ' + teamDisplayName(a) + ' ' + state.score.A + ' a ' + state.score.B + ' ' + teamDisplayName(b) + '.';
+  speak(msg);
+  showToast(msg);
+}
+function speakLastMarkingCommand(){
+  if(state.history.length===0){
+    speak('Nenhuma marcação registrada ainda.');
+    showToast('Nenhuma marcação registrada ainda.');
+    return;
+  }
+  const last = state.history[state.history.length-1];
+  const msg = 'Última marcação: ' + last.label + ', ' + last.playerName + '.';
+  speak(msg);
+  showToast(msg);
+}
+
 function processVoiceCommand(rawText){
   const text = applyVoiceSynonyms(normalizeVoiceText(rawText));
+
+  // comandos informativos — funcionam em qualquer posição da fala,
+  // não dependem de começar com uma palavra-gatilho de ação
+  if(text.includes('ultima marcacao') || text.includes('ultimo historico') || text.includes('ultima historico') || text.includes('ultimo marcacao')){
+    speakLastMarkingCommand();
+    return;
+  }
+  if(text.includes('placar')){
+    speakScoreCommand();
+    return;
+  }
 
   // ignora silenciosamente falas que não começam com uma palavra de comando
   // reconhecida (conversas de fundo, ruído etc. não geram aviso nenhum)
@@ -2131,6 +2288,17 @@ function applyAction(team, player, actionKey){
     return;
   }
   const actionDef = ACTIONS.find(a=>a.key===actionKey);
+
+  if(actionKey==='ace' && state.servingPlayerId && state.servingPlayerId !== player.id){
+    const server = findPlayerAnywhereById(state.servingPlayerId);
+    const serverName = server ? server.name : 'outro jogador';
+    state.errorMessage = 'Ace só pode ser marcado para quem sacou! Quem sacou foi ' + serverName + '.';
+    speak('Atenção! Ace só vale para quem sacou, ' + serverName + '.');
+    markDirty();
+    renderAll();
+    return;
+  }
+
   player.stats[actionKey] += 1;
   speak(actionDef.title + ' ' + player.name);
 
@@ -2166,6 +2334,8 @@ function awardPoint(team){
   if(!state.serveConfirmed){
     state.errorMessage = 'Você esqueceu de marcar o saque!';
     speak('Atenção! Marque o saque.');
+  } else {
+    state.errorMessage = null; // saque confirmado certinho — some qualquer aviso de erro pendente
   }
 
   state.score[team] += 1;
