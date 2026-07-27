@@ -624,8 +624,11 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.40.5";
+const APP_VERSION = "3.41.0";
 const CHANGELOG = [
+  { version:"3.41.0", date:"25/07/2026", changes:[
+    "Agora não é mais possível marcar dois saques seguidos, nem marcar um ponto sem antes confirmar o saque — antes eram só avisos, agora a marcação é bloqueada de verdade. A única exceção é o botão \"+1 direto\", que continua livre dessa exigência (para pontos rápidos sem rastrear jogador)."
+  ]},
   { version:"3.40.5", date:"25/07/2026", changes:[
     "Tentativa de correção da narração parando de funcionar em celulares: revisei o código das versões anteriores e não encontrei nenhuma mudança funcional que devesse afetar a narração — é provável que seja um bug conhecido do motor de voz do Chrome/Android, que pode \"travar\" silenciosamente depois de cancelar/falar em sequência rápida, ou depois da tela bloquear. Adicionadas três proteções: pequena pausa entre cancelar e iniciar a fala, reset automático do motor de voz ao voltar pro app, e uma chamada periódica de \"resume\" para evitar que ele \"durma\"."
   ]},
@@ -2257,9 +2260,17 @@ function applyAction(team, player, actionKey){
       return;
     }
 
+    const isDoubleServe = !isFirstServeEver && state.serveConfirmed; // já tinha marcado um saque e nenhum ponto aconteceu desde então
+    if(isDoubleServe){
+      state.errorMessage = 'Não é possível marcar dois saques seguidos! Marque o ponto antes de sacar de novo.';
+      speak('Não é possível marcar dois saques seguidos.');
+      markDirty();
+      renderAll();
+      return;
+    }
+
     const expectedId = state.servingPlayerId;
     const isWrongServer = !isFirstServeEver && expectedId && expectedId !== player.id;
-    const isDoubleServe = !isFirstServeEver && state.serveConfirmed; // já tinha marcado um saque e nenhum ponto aconteceu desde então
     player.stats.saqueCerto += 1;
     state.errorMessage = null; // marcar o saque agora corrige o aviso de "saque esquecido"
     if(isFirstServeEver){
@@ -2269,9 +2280,6 @@ function applyAction(team, player, actionKey){
       if(team==='A'){ state.rotationIndexA = idx>=0 ? idx : 0; state.rotationStartedA = true; }
       else { state.rotationIndexB = idx>=0 ? idx : 0; state.rotationStartedB = true; }
       speak(STAT_ONLY.title + ' ' + player.name);
-    } else if(isDoubleServe){
-      state.errorMessage = 'Saque marcado 2 vezes seguidas sem ponto! Marque o ponto antes de sacar de novo.';
-      speak('Atenção! Dois saques seguidos sem ponto.');
     } else if(isWrongServer){
       const expectedPlayer = findPlayerAnywhereById(expectedId);
       const expectedName = expectedPlayer ? expectedPlayer.name : 'outro jogador';
@@ -2288,6 +2296,17 @@ function applyAction(team, player, actionKey){
     return;
   }
   const actionDef = ACTIONS.find(a=>a.key===actionKey);
+
+  // não permite marcar ponto (ataque, bloqueio, erro etc.) sem o saque
+  // confirmado antes — exceção: o botão "+1 direto" (quickPoint) não passa
+  // por essa função, então continua livre dessa exigência
+  if(!state.serveConfirmed){
+    state.errorMessage = 'Marque o saque antes de marcar o ponto!';
+    speak('Marque o saque antes do ponto.');
+    markDirty();
+    renderAll();
+    return;
+  }
 
   if(actionKey==='ace' && state.servingPlayerId && state.servingPlayerId !== player.id){
     const server = findPlayerAnywhereById(state.servingPlayerId);
@@ -2311,7 +2330,7 @@ function quickPoint(team){
   pushUndoSnapshot();
   logEvent(team, {name:'Ponto direto'}, 'Ponto direto', team, null);
   speak('Ponto direto ' + teamDisplayName(slotTeam(team)));
-  awardPoint(team);
+  awardPoint(team, true); // exceção: "+1 direto" não exige saque confirmado antes
 }
 
 function logEvent(actingTeam, player, label, winningTeam, actionKey){
@@ -2328,14 +2347,16 @@ function logEvent(actingTeam, player, label, winningTeam, actionKey){
   });
 }
 
-function awardPoint(team){
+function awardPoint(team, skipServeCheck){
   const isSideOut = state.serve !== team; // o saque mudou de time
 
-  if(!state.serveConfirmed){
-    state.errorMessage = 'Você esqueceu de marcar o saque!';
-    speak('Atenção! Marque o saque.');
-  } else {
-    state.errorMessage = null; // saque confirmado certinho — some qualquer aviso de erro pendente
+  if(!skipServeCheck){
+    if(!state.serveConfirmed){
+      state.errorMessage = 'Você esqueceu de marcar o saque!';
+      speak('Atenção! Marque o saque.');
+    } else {
+      state.errorMessage = null; // saque confirmado certinho — some qualquer aviso de erro pendente
+    }
   }
 
   state.score[team] += 1;
