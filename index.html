@@ -296,6 +296,22 @@ label.field-label{display:block; font-size:11px; text-transform:uppercase; lette
 .score-side.a .score-name{color:var(--teamA);}
 .score-side.b .score-name{color:var(--teamB);}
 .score-num{font-family:'Teko',sans-serif; font-size:114px; line-height:0.9; font-weight:700; margin:2px 0 0;}
+
+.team-switch-btn{
+  position:absolute; top:10px; right:10px; width:24px; height:24px; border-radius:50%;
+  background:var(--bg-elev-2); border:1px solid var(--line); color:var(--muted);
+  display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer; z-index:2;
+}
+.score-side.b .team-switch-btn{ right:auto; left:10px; }
+.team-switch-btn:active{ transform:scale(0.9); }
+.team-switch-btn.hidden{ display:none; }
+.team-switch-option{
+  padding:12px 14px; border-radius:11px; background:var(--bg-elev-2); border:1px solid var(--line);
+  margin-bottom:8px; font-size:14.5px; font-weight:600; cursor:pointer;
+}
+.team-switch-option:active{ transform:scale(0.98); }
+.team-switch-option.active{ border-color:var(--good); color:var(--good); background:var(--good-dim); cursor:default; }
+.team-switch-option-tag{ font-size:11px; font-weight:600; color:var(--muted-2); margin-left:6px; }
 .serve-dot{
   display:inline-block; font-size:15px; line-height:1; margin-left:6px; margin-bottom:2px;
   animation: serveSpin 1.1s linear infinite;
@@ -426,12 +442,13 @@ table.stats-table tr:last-child td{border-bottom:none;}
 .set-pill-score.b{color:var(--teamB);}
 
 /* ===== Bottom action bar ===== */
-.bottombar{
-  display:flex; gap:8px; width:100%;
+.bottombar-wrap{
+  display:flex; flex-direction:column; gap:8px; width:100%;
   margin:64px auto 24px; max-width:720px;
   background:rgba(20,27,38,0.9); border:1px solid var(--line); border-radius:14px;
   padding:12px 12px calc(12px + env(safe-area-inset-bottom));
 }
+.bottombar{display:flex; gap:8px; width:100%;}
 .bar-btn{
   flex:1; padding:11px 4px; border-radius:12px; border:1px solid var(--line); background:var(--bg-elev-2);
   color:var(--text); font-weight:700; font-size:12.5px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; text-align:center;
@@ -516,7 +533,7 @@ table.stats-table tr:last-child td{border-bottom:none;}
   .mini-action-grid{grid-template-columns:repeat(9,1fr); gap:1px; flex:1;}
   .mini-action{padding:8px 10px; min-height:34px; font-size:12px; border-radius:8px;}
 
-  .bottombar{order:5; padding:6px 10px calc(6px + env(safe-area-inset-bottom)); margin:32px auto 16px;}
+  .bottombar-wrap{order:5; padding:6px 10px calc(6px + env(safe-area-inset-bottom)); margin:32px auto 16px;}
   .bar-btn{padding:9px 4px; font-size:11.5px;}
 }
 </style>
@@ -529,7 +546,7 @@ table.stats-table tr:last-child td{border-bottom:none;}
   <div class="brand"><span class="ball"></span> Marcação Vôlei</div>
   <div class="topbar-actions">
     <div class="icon-btn" id="btnSaveCloud" title="Salvar na nuvem (opcional)">☁<span class="unsaved-dot" id="unsavedDot"></span></div>
-    <div class="icon-btn" id="btnArchive" title="Partidas encerradas">📋</div>
+    <div class="icon-btn" id="btnArchive" title="Sets encerrados">📋</div>
     <div class="icon-btn" id="btnHelp" title="Ajuda: regras e comandos de voz">❓</div>
     <div class="icon-btn" id="btnSpeech" title="Narração por voz: ligada">🔊</div>
     <div class="icon-btn" id="btnVoiceCmd" title="Marcar pontos por comando de voz">🎤</div>
@@ -538,8 +555,6 @@ table.stats-table tr:last-child td{border-bottom:none;}
       <span id="versionTag">v1.0</span><span class="version-date" id="versionDate"></span>
     </div>
     <div class="icon-btn hidden" id="btnEditTeams" title="Voltar para formação dos times">👥</div>
-    <div class="icon-btn hidden" id="btnBackTab" title="Voltar para aba anterior">←</div>
-    <div class="icon-btn" id="btnReset" title="Novo jogo">⟳</div>
   </div>
 </div>
 
@@ -567,7 +582,7 @@ table.stats-table tr:last-child td{border-bottom:none;}
   <!-- ===================== SETUP SCREEN ===================== -->
   <div id="setupScreen" class="setup-wrap hidden">
     <div class="setup-hero">
-      <h1>Nova Partida</h1>
+      <h1>Times</h1>
       <p>Cadastre os times, o elenco e comece a marcar.</p>
     </div>
 
@@ -586,7 +601,6 @@ table.stats-table tr:last-child td{border-bottom:none;}
 
     <button class="start-btn secondary hidden" id="btnBackToMatch">Voltar para a partida</button>
     <button class="start-btn" id="btnStart">Iniciar Partida</button>
-    <button class="start-btn danger hidden" id="btnEndMatchSetup">Encerrar partida</button>
     <button class="export-btn" id="btnExportXls">📤 Exportar dados (XLS)</button>
     <div class="err-msg hidden" id="setupErr"></div>
   </div>
@@ -596,6 +610,7 @@ table.stats-table tr:last-child td{border-bottom:none;}
 
     <div class="scoreboard">
       <div class="score-side a">
+        <span class="team-switch-btn hidden" id="btnSwitchTeamA" data-team="A" title="Trocar time">⇄</span>
         <div class="score-name" id="mNameA">TIME 1</div>
         <div class="score-num" id="mScoreA">0<span class="serve-dot hidden" id="serveDotA">🏐</span></div>
       </div>
@@ -605,6 +620,7 @@ table.stats-table tr:last-child td{border-bottom:none;}
         <div class="action-alert" id="actionAlert"></div>
       </div>
       <div class="score-side b">
+        <span class="team-switch-btn hidden" id="btnSwitchTeamB" data-team="B" title="Trocar time">⇄</span>
         <div class="score-name" id="mNameB">TIME 2</div>
         <div class="score-num" id="mScoreB"><span class="serve-dot hidden" id="serveDotB">🏐</span>0</div>
       </div>
@@ -624,10 +640,16 @@ table.stats-table tr:last-child td{border-bottom:none;}
 
     <!-- Ações de desfazer/refazer/encerrar set — bem abaixo dos jogadores,
          de propósito, para não aparecer junto do resto e exigir rolagem -->
-    <div class="bottombar hidden" id="bottomBar">
-      <button class="bar-btn undo" id="btnUndo">↩︎ Desfazer</button>
-      <button class="bar-btn redo" id="btnRedo">↪︎ Refazer</button>
-      <button class="bar-btn primary" id="btnEndSet">Encerrar set</button>
+    <div class="bottombar-wrap hidden" id="bottomBarWrap">
+      <div class="bottombar" id="tabNavBar">
+        <button class="bar-btn" id="btnTabBack">◀ Voltar</button>
+        <button class="bar-btn" id="btnTabForward">Avançar ▶</button>
+      </div>
+      <div class="bottombar" id="bottomBar">
+        <button class="bar-btn undo" id="btnUndo">↩︎ Desfazer</button>
+        <button class="bar-btn redo" id="btnRedo">↪︎ Refazer</button>
+        <button class="bar-btn primary" id="btnEndSet">Próximo set</button>
+      </div>
     </div>
 
     <!-- Estatísticas / Histórico — ainda mais abaixo, depois das ações -->
@@ -646,7 +668,51 @@ table.stats-table tr:last-child td{border-bottom:none;}
   </div>
 </div>
 
+<!-- ===== Firebase ===== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+/* ---------------- config do Firebase ----------------
+   Substitua os valores abaixo pelos dados do SEU projeto Firebase
+   (Console do Firebase > Configurações do projeto > Seus apps > SDK config).
+   Crie um projeto gratuito em https://console.firebase.google.com se ainda não tiver um,
+   e ative o Firestore (modo produção ou teste) em "Firestore Database". */
+const firebaseConfig = {
+  apiKey: "AIzaSyDDt2mkY6bzqLFWTf_fnLpFpgM12S9eVV4",
+  authDomain: "marcador-pontos-volei.firebaseapp.com",
+  projectId: "marcador-pontos-volei",
+  storageBucket: "marcador-pontos-volei.firebasestorage.app",
+  messagingSenderId: "1018457983318",
+  appId: "1:1018457983318:web:ec90fd0e68b66d74f1eef7"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+/* Coleção onde ficam salvos os dados do app (uma coleção só, um doc por chave).
+   Isso substitui o antigo window.storage: os dados passam a ficar no Firestore
+   e são os mesmos para qualquer pessoa/dispositivo que abrir este app com a
+   mesma configuração do Firebase (ou seja, os dados são "compartilhados"). */
+const FB_COLLECTION = 'volei_app_data';
+
+const cloudStorage = {
+  async set(key, value){
+    try{
+      await db.collection(FB_COLLECTION).doc(key).set({ value, updatedAt: Date.now() });
+      return { key, value, shared: true };
+    }catch(e){
+      console.error('Firebase set() falhou:', e);
+      return null;
+    }
+  },
+  async get(key){
+    const snap = await db.collection(FB_COLLECTION).doc(key).get();
+    if(!snap.exists) return null;
+    const data = snap.data();
+    return { key, value: data.value, shared: true };
+  }
+};
+
 (function(){
 
 const POSITIONS = ["LE","P1","CE","OP","P2","LI"];
@@ -670,8 +736,23 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.44.0";
+const APP_VERSION = "3.48.0";
 const CHANGELOG = [
+  { version:"3.48.0", date:"28/07/2026", changes:[
+    "Armazenamento na nuvem migrado do sistema interno do Claude para o Firebase (Firestore): agora o salvamento da partida e das preferências de tela usa um projeto Firebase próprio, permitindo rodar o app fora do Claude.ai."
+  ]},
+  { version:"3.47.1", date:"27/07/2026", changes:[
+    "Título da tela inicial trocado de \"Nova Partida\" para \"Times\"."
+  ]},
+  { version:"3.47.0", date:"27/07/2026", changes:[
+    "Com mais de 2 times cadastrados, agora dá para trocar quem está jogando em cada lado direto na tela de marcação de pontos (botão \"⇄\" em cada lado do placar), sem precisar voltar para \"Nova Partida\". Se a partida já tem pontos registrados, o app pede confirmação antes de trocar (a troca reinicia placar, sets e histórico); sem nenhum ponto registrado ainda, a troca acontece na hora, sem perguntar nada."
+  ]},
+  { version:"3.46.0", date:"27/07/2026", changes:[
+    "Botão \"◀ Voltar\" (e o botão/gesto de voltar do celular) agora não fica mais travado na aba Quadra: ao chegar nela, um novo toque em \"Voltar\" leva para a tela inicial \"Nova Partida\", com a partida continuando salva e disponível em \"Voltar para a partida\"."
+  ]},
+  { version:"3.45.0", date:"27/07/2026", changes:[
+    "\"Partidas encerradas\" virou \"Sets encerrados\": como a partida é infinita (não tem um botão pra encerrá-la), agora é cada SET que, ao ser finalizado em \"Próximo set\", entra automaticamente no histórico — com placar e estatísticas dos jogadores daquele set. Antes esse resumo dependia de uma partida inteira ser encerrada, o que nunca acontecia na prática."
+  ]},
   { version:"3.44.0", date:"27/07/2026", changes:[
     "Comandos de voz com 2 ou mais palavras agora reconhecem a primeira palavra pelo prefixo, mesmo com transcrições bem diferentes das já cadastradas: começando com \"at\" vira \"ataque\", \"sa\" vira \"saque\", \"pi\" vira \"pingada\", \"bl\" vira \"bloqueio\", \"ei\" vira \"ace\", \"er\" vira \"erro\", \"pa\" vira \"passe\" e \"in\" vira \"infração\"."
   ]},
@@ -1059,7 +1140,6 @@ let state = null;      // full match state
 let undoStack = [];    // snapshots for undo
 let redoStack = [];    // snapshots for redo (desfeitos pelo botão Desfazer)
 let activeTab = "court";
-let tabStack = [];
 
 const $ = (sel, root=document) => root.querySelector(sel);
 const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
@@ -1174,13 +1254,13 @@ function updateSaveIndicator(){
   if(cloudBtn) cloudBtn.title = hasUnsavedChanges ? 'Alterações não salvas — toque para salvar na nuvem' : 'Salvar na nuvem (opcional)';
 }
 
-let matchArchive = [];
+let setArchive = []; // histórico de SETS encerrados (a partida em si é infinita — só os sets se encerram e trocam)
 
 async function saveState(){
-  const payload = JSON.stringify({ match: state, archive: matchArchive });
+  const payload = JSON.stringify({ match: state, sets: setArchive });
   for(let attempt=0; attempt<2; attempt++){
     try{
-      const result = await window.storage.set('volei_match_current', payload);
+      const result = await cloudStorage.set('volei_match_current', payload);
       if(result){
         showToast('Partida salva na nuvem.');
         markClean();
@@ -1188,29 +1268,32 @@ async function saveState(){
       }
       throw new Error('Resposta vazia do armazenamento');
     }catch(e){
-      console.error('Falha ao salvar (tentativa '+(attempt+1)+'):', e);
       if(attempt===0) await delay(500);
     }
   }
-  showToast('Não foi possível salvar na nuvem agora. Tente novamente.');
+  showToast('Não foi possível salvar agora.');
   return false;
 }
 async function loadState(){
   try{
-    const r = await window.storage.get('volei_match_current');
+    const r = await cloudStorage.get('volei_match_current');
     if(r && r.value){
       const parsed = JSON.parse(r.value);
       let loadedMatch, loadedArchive;
       if(parsed && parsed.match){
         loadedMatch = parsed.match;
-        loadedArchive = Array.isArray(parsed.archive) ? parsed.archive : [];
+        // 'sets' é o formato atual (histórico de sets encerrados); 'archive' é o
+        // nome antigo do campo, de quando a ideia era arquivar partidas inteiras.
+        if(Array.isArray(parsed.sets)) loadedArchive = parsed.sets;
+        else if(Array.isArray(parsed.archive)) loadedArchive = parsed.archive;
+        else loadedArchive = [];
       } else {
-        // formato salvo antes de existir o arquivo de partidas encerradas
+        // formato salvo antes de existir o histórico de sets encerrados
         loadedMatch = parsed;
         loadedArchive = [];
       }
       migrateState(loadedMatch);
-      matchArchive = loadedArchive;
+      setArchive = loadedArchive;
       return loadedMatch;
     }
   }catch(e){ /* not found */ }
@@ -1387,15 +1470,13 @@ let cameFromMatch = false;
 function showSetup(){
   $('#setupScreen').classList.remove('hidden');
   $('#matchScreen').classList.add('hidden');
-  $('#bottomBar').classList.add('hidden');
-  $('#btnBackTab').classList.add('hidden');
+  $('#bottomBarWrap').classList.add('hidden');
   $('#btnEditTeams').classList.add('hidden');
   renderTeamsSetup();
   renderMatchupSelectors();
 
   $('#btnBackToMatch').classList.toggle('hidden', !cameFromMatch);
   $('#btnStart').textContent = cameFromMatch ? 'Salvar alterações' : 'Iniciar Partida';
-  $('#btnEndMatchSetup').classList.toggle('hidden', !cameFromMatch);
 }
 
 document.body.addEventListener('click', (e)=>{
@@ -1456,7 +1537,6 @@ $('#btnStart').addEventListener('click', ()=>{
       state.history = [];
       undoStack = [];
       redoStack = [];
-      tabStack = [];
       activeTab = 'court';
       editEntryActiveA = state.activeAId;
       editEntryActiveB = state.activeBId;
@@ -1482,7 +1562,6 @@ $('#btnStart').addEventListener('click', ()=>{
   state.history = [];
   undoStack = [];
   redoStack = [];
-  tabStack = [];
   activeTab = 'court';
   markDirty();
   showMatch();
@@ -1521,6 +1600,9 @@ function renderScoreboard(){
   const a = slotTeam('A'), b = slotTeam('B');
   $('#mNameA').textContent = teamDisplayName(a).toUpperCase();
   $('#mNameB').textContent = teamDisplayName(b).toUpperCase();
+  const canSwitchTeams = state.teams.length>2;
+  $('#btnSwitchTeamA').classList.toggle('hidden', !canSwitchTeams);
+  $('#btnSwitchTeamB').classList.toggle('hidden', !canSwitchTeams);
   // início do set: ninguém sacou ainda (placar 0-0 e nenhum saque confirmado) —
   // não mostra bolinha nem lembrete de saque em nenhum time até isso ser definido,
   // mesmo que "state.serve" tenha ficado com um valor antigo de antes dessa regra
@@ -1550,6 +1632,87 @@ function renderScoreboard(){
     }
   }
 }
+
+/* ---------------- trocar time direto na tela de marcação (3+ times) ----------------
+   Cada lado do placar tem um botão "⇄" (só aparece quando há mais de 2 times
+   cadastrados) que abre a lista de times para escolher quem joga naquele lado.
+   Se já existem pontos registrados na partida em curso, pede confirmação antes
+   de trocar (a troca reinicia placar/sets/histórico, exatamente como ao trocar
+   o confronto pela tela "Nova Partida"). Sem nenhum ponto registrado, troca na
+   hora, sem perguntar nada. */
+function openTeamSwitchSheet(slot){
+  const currentId = slot==='A' ? state.activeAId : state.activeBId;
+  const otherId = slot==='A' ? state.activeBId : state.activeAId;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop';
+  backdrop.id = 'teamSwitchBackdrop';
+  const optsHtml = state.teams.map(t=>{
+    const isCurrent = t.id===currentId;
+    const isOther = t.id===otherId;
+    return `<div class="team-switch-option ${isCurrent?'active':''}" data-team-id="${t.id}">${escapeHtml(teamDisplayName(t))}${isCurrent ? '<span class="team-switch-option-tag">jogando neste lado</span>' : (isOther ? '<span class="team-switch-option-tag">jogando do outro lado</span>' : '')}</div>`;
+  }).join('');
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div class="who">Trocar time — Lado ${slot}</div>
+        <div class="close-x" id="teamSwitchClose">✕</div>
+      </div>
+      ${optsHtml}
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+  backdrop.addEventListener('click', (e)=>{
+    if(e.target===backdrop || e.target.closest('#teamSwitchClose')){ backdrop.remove(); return; }
+    const opt = e.target.closest('.team-switch-option');
+    if(opt){
+      backdrop.remove();
+      requestTeamSwitch(slot, opt.dataset.teamId);
+    }
+  });
+}
+
+function switchActiveTeam(slot, teamId){
+  if(slot==='A') state.activeAId = teamId; else state.activeBId = teamId;
+  if(state.activeAId===state.activeBId){
+    const alt = state.teams.find(t=>t.id!==teamId);
+    if(alt){ if(slot==='A') state.activeBId = alt.id; else state.activeAId = alt.id; }
+  }
+  // troca de time em andamento = confronto novo: reinicia placar, sets e histórico,
+  // igual ao que já acontece ao trocar o confronto pela tela "Nova Partida"
+  state.serve = null;
+  resetRotation();
+  state.servingPlayerId = null;
+  state.errorMessage = null;
+  state.setNum = 1;
+  state.score = {A:0,B:0};
+  state.setsHistory = [];
+  state.setsWonA = 0; state.setsWonB = 0;
+  state.history = [];
+  undoStack = [];
+  redoStack = [];
+  editEntryActiveA = state.activeAId;
+  editEntryActiveB = state.activeBId;
+  markDirty();
+  renderAll();
+}
+
+function requestTeamSwitch(slot, teamId){
+  const currentId = slot==='A' ? state.activeAId : state.activeBId;
+  if(teamId===currentId) return;
+  const hasPointHistory = state.history.length>0;
+  if(hasPointHistory){
+    showConfirmDialog('Já existem pontos registrados nesta partida. Trocar o time agora reinicia o placar, os sets e o histórico. Deseja continuar?', ()=>{
+      switchActiveTeam(slot, teamId);
+      showToast('Time alterado — placar reiniciado.');
+    });
+  } else {
+    switchActiveTeam(slot, teamId); // sem pontos registrados ainda — troca direto, sem perguntar nada
+  }
+}
+
+$('#btnSwitchTeamA').addEventListener('click', ()=> openTeamSwitchSheet('A'));
+$('#btnSwitchTeamB').addEventListener('click', ()=> openTeamSwitchSheet('B'));
 
 function totalPointsFor(p){
   const s = p.stats;
@@ -1765,7 +1928,7 @@ function renderAll(){
   renderHistory();
   $('#btnUndo').disabled = undoStack.length===0;
   $('#btnRedo').disabled = redoStack.length===0;
-  updateBackTabBtn();
+  updateTabNavButtons();
   updateErrorBanner();
 }
 
@@ -1783,7 +1946,7 @@ function updateErrorBanner(){
 function showMatch(){
   $('#setupScreen').classList.add('hidden');
   $('#matchScreen').classList.remove('hidden');
-  $('#bottomBar').classList.remove('hidden');
+  $('#bottomBarWrap').classList.remove('hidden');
   $('#btnEditTeams').classList.remove('hidden');
   renderAll();
 }
@@ -1939,25 +2102,23 @@ function openArchive(){
   backdrop.id = 'archiveBackdrop';
 
   let bodyHtml;
-  if(matchArchive.length===0){
-    bodyHtml = '<div class="empty-note">Nenhuma partida encerrada ainda.</div>';
+  if(setArchive.length===0){
+    bodyHtml = '<div class="empty-note">Nenhum set encerrado ainda.</div>';
   } else {
-    bodyHtml = matchArchive.map((m, idx)=>{
-      const setsHtml = m.setsHistory.map((s,i)=>`<span class="set-pill-mini">Set ${i+1}: ${s.a}–${s.b}</span>`).join('');
+    bodyHtml = setArchive.map((s, idx)=>{
       return `
         <div class="archive-item">
           <div class="archive-item-head">
-            <div class="archive-matchup">${escapeHtml(m.teamAName)}<span class="archive-vs">×</span>${escapeHtml(m.teamBName)}</div>
-            <div class="archive-date">${formatArchiveDate(m.endedAt)}</div>
+            <div class="archive-matchup">${escapeHtml(s.teamAName)}<span class="archive-vs">×</span>${escapeHtml(s.teamBName)}</div>
+            <div class="archive-date">${formatArchiveDate(s.endedAt)}</div>
           </div>
-          <div class="archive-sets-score">${m.setsWonA}–${m.setsWonB} <span class="archive-sets-label">sets</span></div>
-          <div class="archive-sets-list">${setsHtml}</div>
+          <div class="archive-sets-score">${s.scoreA}–${s.scoreB} <span class="archive-sets-label">Set ${s.setNum}</span></div>
           <div class="archive-stats-toggle" data-idx="${idx}">Ver estatísticas ▾</div>
           <div class="archive-stats-block" id="archiveStats${idx}">
-            <div class="stats-team-title a" style="font-size:16px;">${escapeHtml(m.teamAName)}</div>
-            ${buildArchiveStatsTable(m.teamAPlayers)}
-            <div class="stats-team-title b" style="font-size:16px; margin-top:12px;">${escapeHtml(m.teamBName)}</div>
-            ${buildArchiveStatsTable(m.teamBPlayers)}
+            <div class="stats-team-title a" style="font-size:16px;">${escapeHtml(s.teamAName)}</div>
+            ${buildArchiveStatsTable(s.teamAPlayers)}
+            <div class="stats-team-title b" style="font-size:16px; margin-top:12px;">${escapeHtml(s.teamBName)}</div>
+            ${buildArchiveStatsTable(s.teamBPlayers)}
           </div>
         </div>
       `;
@@ -1968,7 +2129,7 @@ function openArchive(){
     <div class="sheet">
       <div class="sheet-handle"></div>
       <div class="sheet-header">
-        <div class="who">Partidas encerradas</div>
+        <div class="who">Sets encerrados</div>
         <div class="close-x" id="archiveClose">✕</div>
       </div>
       ${bodyHtml}
@@ -2035,18 +2196,17 @@ async function saveDisplayPrefs(){
     height: ($('#playersA') && $('#playersA').style.height) || null
   };
   try{
-    const result = await window.storage.set('volei_display_prefs', JSON.stringify(prefs));
+    const result = await cloudStorage.set('volei_display_prefs', JSON.stringify(prefs));
     if(result){ showToast('Preferências de tela salvas.'); return; }
     throw new Error('Resposta vazia do armazenamento');
   }catch(e){
-    console.error('Falha ao salvar preferências de tela:', e);
     showToast('Não foi possível salvar as preferências agora. Tente novamente.');
   }
 }
 
 async function loadDisplayPrefs(){
   try{
-    const r = await window.storage.get('volei_display_prefs');
+    const r = await cloudStorage.get('volei_display_prefs');
     if(r && r.value){
       const prefs = JSON.parse(r.value);
       if(prefs.width){
@@ -2068,33 +2228,55 @@ async function loadDisplayPrefs(){
 
 $('#widthSavePrefs').addEventListener('click', saveDisplayPrefs);
 
-function switchTab(tabName, recordHistory){
-  if(recordHistory === undefined) recordHistory = true;
-  if(recordHistory && tabName !== activeTab){
-    tabStack.push(activeTab);
-  }
+const TAB_ORDER = ['court','stats','history'];
+
+function switchTab(tabName){
   activeTab = tabName;
   $$('.tab-btn').forEach(b=> b.classList.toggle('active', b.dataset.tab===tabName));
   $('#tabCourt').classList.toggle('hidden', activeTab!=='court');
   $('#tabStats').classList.toggle('hidden', activeTab!=='stats');
   $('#tabHistory').classList.toggle('hidden', activeTab!=='history');
-  updateBackTabBtn();
+  updateTabNavButtons();
 }
-function updateBackTabBtn(){
-  const btn = $('#btnBackTab');
-  const showIt = state && state.started && tabStack.length>0;
-  btn.classList.toggle('hidden', !showIt);
+function updateTabNavButtons(){
+  const backBtn = $('#btnTabBack'), fwdBtn = $('#btnTabForward');
+  const idx = TAB_ORDER.indexOf(activeTab);
+  // "Voltar" agora sempre pode ser clicado durante uma partida: dentro das
+  // abas (Quadra/Estatísticas/Histórico) e, a partir da Quadra, até a tela
+  // inicial "Nova Partida".
+  if(backBtn) backBtn.disabled = !(state && state.started);
+  if(fwdBtn) fwdBtn.disabled = !(state && state.started && idx>=0 && idx<TAB_ORDER.length-1);
+}
+
+function goTabBack(){
+  const idx = TAB_ORDER.indexOf(activeTab);
+  if(idx>0){
+    switchTab(TAB_ORDER[idx-1]);
+    return true;
+  }
+  // já está na primeira aba (Quadra) — volta para a tela inicial "Nova Partida"
+  if(state && state.started){
+    cameFromMatch = true;
+    editEntryActiveA = state.activeAId;
+    editEntryActiveB = state.activeBId;
+    showSetup();
+    return true;
+  }
+  return false;
+}
+function goTabForward(){
+  const idx = TAB_ORDER.indexOf(activeTab);
+  if(idx===-1 || idx>=TAB_ORDER.length-1) return false;
+  switchTab(TAB_ORDER[idx+1]);
+  return true;
 }
 
 $$('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=> switchTab(btn.dataset.tab));
 });
 
-$('#btnBackTab').addEventListener('click', ()=>{
-  if(tabStack.length===0) return;
-  const prev = tabStack.pop();
-  switchTab(prev, false);
-});
+$('#btnTabBack').addEventListener('click', goTabBack);
+$('#btnTabForward').addEventListener('click', goTabForward);
 
 /* ---------------- scoring logic ---------------- */
 function pushUndoSnapshot(){
@@ -2586,12 +2768,30 @@ function awardPoint(team, skipServeCheck){
   renderAll();
 }
 
+function archiveFinishedSet(a, b){
+  const teamA = slotTeam('A'), teamB = slotTeam('B');
+  setArchive.unshift({
+    id: uid(),
+    endedAt: new Date().toISOString(),
+    setNum: state.setNum,
+    teamAName: teamDisplayName(teamA),
+    teamBName: teamDisplayName(teamB),
+    scoreA: a,
+    scoreB: b,
+    teamAPlayers: teamA.players.map(p=>({name:p.name, stats: statsForPlayerInSet(p.id, state.setNum)})),
+    teamBPlayers: teamB.players.map(p=>({name:p.name, stats: statsForPlayerInSet(p.id, state.setNum)}))
+  });
+}
+
 function finishSet(){
   const a = state.score.A, b = state.score.B;
   state.setsHistory.push({a,b});
   if(a>b) state.setsWonA++;
   else if(b>a) state.setsWonB++;
   // empate: o set é registrado, mas nenhum time soma vitória de set
+
+  archiveFinishedSet(a,b); // guarda o set (placar + estatísticas) no histórico de sets encerrados,
+                            // já que a partida em si é infinita — só os sets se encerram e trocam
 
   state.setNum += 1;
   state.score = {A:0,B:0};
@@ -2601,18 +2801,17 @@ function finishSet(){
   state.servingPlayerId = null;
   state.errorMessage = null;
 
-  markDirty();
+  // permanece na partida — a quadra já fica pronta para o novo set
+  switchTab('court');
 
-  // volta para a tela Nova Partida; o próximo set já fica pronto para continuar
-  cameFromMatch = true;
-  editEntryActiveA = state.activeAId;
-  editEntryActiveB = state.activeBId;
-  showSetup();
+  markDirty();
+  renderAll();
+  showToast('Set encerrado — Set ' + state.setNum + ' iniciado.');
 }
 
 function showEndSetDialog(){
   const a = state.score.A, b = state.score.B;
-  showConfirmDialog(`Tem certeza que deseja encerrar o Set ${state.setNum} (placar ${a}–${b})?`, ()=>{
+  showConfirmDialog(`Tem certeza que deseja encerrar o Set ${state.setNum} (placar ${a}–${b}) e avançar para o próximo set?`, ()=>{
     pushUndoSnapshot();
     finishSet();
   });
@@ -2635,43 +2834,6 @@ function showConfirmDialog(message, onConfirm){
     overlay.remove();
     onConfirm();
   });
-}
-
-// Altere a senha abaixo para a que você quiser usar.
-const END_MATCH_PASSWORD = "1234";
-
-function showPasswordDialog(onSuccess){
-  const overlay = document.createElement('div');
-  overlay.className = 'celebrate';
-  overlay.innerHTML = `
-    <h2 style="font-size:26px;">Senha necessária</h2>
-    <p>Digite a senha para encerrar a partida.</p>
-    <input type="password" id="endMatchPassInput" inputmode="numeric" placeholder="Senha"
-      style="width:100%; max-width:220px; text-align:center; margin-bottom:6px; letter-spacing:3px;">
-    <div id="endMatchPassError" style="color:var(--bad); font-size:12px; min-height:16px; margin-bottom:6px;"></div>
-    <div style="display:flex; gap:10px;">
-      <button class="cel-btn" id="passCancelBtn" style="background:var(--bg-elev-2); color:var(--text); border:1px solid var(--line);">Cancelar</button>
-      <button class="cel-btn" id="passOkBtn">Confirmar</button>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-  const input = overlay.querySelector('#endMatchPassInput');
-  const errEl = overlay.querySelector('#endMatchPassError');
-  setTimeout(()=> input.focus(), 50);
-
-  function tryConfirm(){
-    if(input.value === END_MATCH_PASSWORD){
-      overlay.remove();
-      onSuccess();
-    } else {
-      errEl.textContent = 'Senha incorreta.';
-      input.value = '';
-      input.focus();
-    }
-  }
-  overlay.querySelector('#passOkBtn').addEventListener('click', tryConfirm);
-  overlay.querySelector('#passCancelBtn').addEventListener('click', ()=> overlay.remove());
-  input.addEventListener('keydown', e=>{ if(e.key==='Enter') tryConfirm(); });
 }
 
 /* quick point buttons + mini action buttons (marcação por jogador) */
@@ -2718,68 +2880,6 @@ $('#btnRedo').addEventListener('click', performRedo);
 
 $('#btnEndSet').addEventListener('click', showEndSetDialog);
 
-$('#btnEndMatchSetup').addEventListener('click', ()=>{
-  showPasswordDialog(()=>{
-    showConfirmDialog('Encerrar esta partida e voltar para a tela de Nova Partida?', ()=>{
-      const teamAObj = slotTeam('A'), teamBObj = slotTeam('B');
-      const hadProgress = state.setsHistory.length>0 || state.score.A>0 || state.score.B>0;
-      if(hadProgress){
-        matchArchive.unshift({
-          id: uid(),
-          endedAt: new Date().toISOString(),
-          teamAName: teamDisplayName(teamAObj),
-          teamBName: teamDisplayName(teamBObj),
-          setsWonA: state.setsWonA,
-          setsWonB: state.setsWonB,
-          setsHistory: clone(state.setsHistory),
-          teamAPlayers: teamAObj.players.map(p=>({name:p.name, pos:p.pos, stats:clone(p.stats)})),
-          teamBPlayers: teamBObj.players.map(p=>({name:p.name, pos:p.pos, stats:clone(p.stats)}))
-        });
-        if(matchArchive.length>30) matchArchive.length = 30;
-      }
-
-      state.started = false;
-      state.matchOver = true;
-      state.score = {A:0,B:0};
-      state.setNum = 1;
-      state.setsHistory = [];
-      state.setsWonA = 0; state.setsWonB = 0;
-      state.history = [];
-      state.serve = null;
-      resetRotation();
-      state.servingPlayerId = null;
-      state.errorMessage = null;
-      state.teams.forEach(t=> t.players.forEach(p=> p.stats = emptyStats()));
-      undoStack = [];
-      redoStack = [];
-      tabStack = [];
-      activeTab = 'court';
-      cameFromMatch = false;
-      if(hadProgress) markDirty(); else markClean();
-      showToast(hadProgress ? 'Partida encerrada e salva no histórico de partidas.' : 'Partida encerrada.');
-      showSetup();
-    });
-  });
-});
-
-$('#btnReset').addEventListener('click', ()=>{
-  const doReset = ()=>{
-    state = defaultState();
-    undoStack = [];
-    redoStack = [];
-    tabStack = [];
-    activeTab = 'court';
-    cameFromMatch = false;
-    markClean();
-    showSetup();
-  };
-  if(state.started){
-    showConfirmDialog('Começar um novo jogo? A partida atual será perdida.', doReset);
-  } else {
-    doReset();
-  }
-});
-
 function showToast(msg){
   const t = document.createElement('div');
   t.className='toast'; t.textContent = msg;
@@ -2801,12 +2901,14 @@ function escapeHtml(str){
 /* ---------------- botão voltar (celular / notebook) ----------------
    Objetivo: o botão/gesto de voltar do dispositivo nunca deve sair do
    app "de repente". Prioridade do que o voltar faz:
-     1) fecha um sheet aberto (Ajuda, Versões, Partidas encerradas);
+     1) fecha um sheet aberto (Ajuda, Versões, Sets encerrados);
      2) fecha um diálogo aberto (confirmação, senha);
      3) se estiver editando os times a partir de uma partida em
         andamento, volta para a partida;
      4) se houver uma aba anterior (Quadra/Estatísticas/Histórico),
-        volta para ela;
+        volta para ela; a partir da Quadra (primeira aba), volta para a
+        tela inicial "Nova Partida" (a partida continua salva, dá pra
+        retomá-la com "Voltar para a partida");
      5) se não houver mais nada para voltar dentro do app, salva os
         dados na nuvem e pergunta se o usuário realmente quer fechar.
    O app nunca é encerrado sem que o salvamento tenha sido concluído. */
@@ -2847,9 +2949,10 @@ async function handleBackNavigation(){
     return;
   }
 
-  if(state && state.started && tabStack.length>0){
-    const prev = tabStack.pop();
-    switchTab(prev, false);
+  if(state && state.started){
+    // dentro das abas volta uma aba; a partir da Quadra (primeira aba), volta
+    // para a tela inicial "Nova Partida" — mesmo comportamento do botão "◀ Voltar"
+    goTabBack();
     return;
   }
 
@@ -2866,13 +2969,14 @@ async function confirmAppClose(){
   overlay.className = 'celebrate';
   overlay.innerHTML = `
     <h2 style="font-size:26px;">Fechar aplicativo?</h2>
-    <p>${saved ? 'Seus dados foram salvos na nuvem.' : 'Não foi possível confirmar o salvamento na nuvem agora. Verifique sua conexão antes de sair.'}</p>
+    <p id="closeSaveMsg">${saved ? 'Seus dados foram salvos na nuvem.' : 'Não foi possível confirmar o salvamento agora. Verifique sua conexão antes de sair.'}</p>
     <div style="display:flex; gap:10px;">
       <button class="cel-btn" id="closeCancelBtn" style="background:var(--bg-elev-2); color:var(--text); border:1px solid var(--line);">Continuar no app</button>
       <button class="cel-btn" id="closeOkBtn" style="background:var(--bad);">Fechar app</button>
     </div>
   `;
   document.body.appendChild(overlay);
+  const saveMsgEl = overlay.querySelector('#closeSaveMsg');
 
   overlay.querySelector('#closeCancelBtn').addEventListener('click', ()=>{
     overlay.remove();
@@ -2883,7 +2987,7 @@ async function confirmAppClose(){
     if(hasUnsavedChanges){
       const ok = await saveState();
       if(!ok){
-        showErrorToast('Não foi possível salvar. Tente novamente antes de fechar.');
+        if(saveMsgEl) saveMsgEl.textContent = 'Ainda tentando salvar — verifique sua conexão e toque em "Fechar app" novamente.';
         return;
       }
     }
