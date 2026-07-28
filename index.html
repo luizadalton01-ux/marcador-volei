@@ -409,6 +409,12 @@ body.court-expand-mode .mini-action{
   cursor:pointer; margin-bottom:14px;
 }
 .export-btn:active{transform:scale(0.98);}
+.delete-data-btn{
+  width:100%; padding:11px; border-radius:12px; border:1px solid rgba(229,86,106,0.5);
+  background:var(--bad-dim); color:var(--bad); font-weight:700; font-size:13px;
+  cursor:pointer; margin-bottom:14px;
+}
+.delete-data-btn:active{transform:scale(0.98);}
 .stats-team-block{margin-bottom:16px;}
 .stats-team-title{font-family:'Teko',sans-serif; font-size:20px; font-weight:600; margin:0 0 8px 2px;}
 .team-col.a .stats-team-title, .stats-team-title.a{color:var(--teamA);}
@@ -554,7 +560,6 @@ table.stats-table tr:last-child td{border-bottom:none;}
     <div class="version-badge" id="btnVersion" title="Ver histórico de versões">
       <span id="versionTag">v1.0</span><span class="version-date" id="versionDate"></span>
     </div>
-    <div class="icon-btn hidden" id="btnEditTeams" title="Voltar para formação dos times">👥</div>
   </div>
 </div>
 
@@ -602,6 +607,7 @@ table.stats-table tr:last-child td{border-bottom:none;}
     <button class="start-btn secondary hidden" id="btnBackToMatch">Voltar para a partida</button>
     <button class="start-btn" id="btnStart">Iniciar Partida</button>
     <button class="export-btn" id="btnExportXls">📤 Exportar dados (XLS)</button>
+    <button class="delete-data-btn" id="btnDeleteAllData">🗑️ Apagar dados</button>
     <div class="err-msg hidden" id="setupErr"></div>
   </div>
 
@@ -710,6 +716,15 @@ const cloudStorage = {
     if(!snap.exists) return null;
     const data = snap.data();
     return { key, value: data.value, shared: true };
+  },
+  async delete(key){
+    try{
+      await db.collection(FB_COLLECTION).doc(key).delete();
+      return true;
+    }catch(e){
+      console.error('Firebase delete() falhou:', e);
+      return false;
+    }
   }
 };
 
@@ -736,8 +751,13 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.48.0";
+const APP_VERSION = "3.49.0";
 const CHANGELOG = [
+  { version:"3.49.0", date:"28/07/2026", changes:[
+    "Salvamento na nuvem não acontece mais automaticamente logo após cada ação/ponto marcado — agora salva sozinho a cada 30 minutos (se houver alterações não salvas) ou quando você toca no botão ☁ manualmente.",
+    "Adicionado botão vermelho \"🗑️ Apagar dados\" na tela Times, logo abaixo de \"Exportar dados\": apaga permanentemente times, partida atual, sets encerrados e os dados salvos na nuvem, com uma tela de confirmação em destaque antes de apagar.",
+    "Removido o botão \"👥\" (voltar para formação dos times) que ficava ao lado da versão na barra superior."
+  ]},
   { version:"3.48.0", date:"28/07/2026", changes:[
     "Armazenamento na nuvem migrado do sistema interno do Claude para o Firebase (Firestore): agora o salvamento da partida e das preferências de tela usa um projeto Firebase próprio, permitindo rodar o app fora do Claude.ai."
   ]},
@@ -1134,6 +1154,14 @@ const HELP_DATA = [
   { id:"controle", icon:"⏪", title:"Comandos de voz — controle", items:[
     { name:"Desfazer", tag:"desfaz última ação", tagCls:"info", say:"Desfazer", variants:"Equivale a tocar o botão de desfazer." },
   ]},
+  { id:"app", icon:"⚙️", title:"App e dados", items:[
+    { name:"Salvar na nuvem (☁)", tag:"a cada 30 min ou manual", tagCls:"info",
+      desc:"O app salva os dados na nuvem automaticamente a cada 30 minutos (se houver alterações não salvas) e também quando você toca no botão ☁ no topo. Não salva mais a cada ponto marcado — uma bolinha vermelha no ☁ indica que há alterações ainda não salvas." },
+    { name:"Exportar dados (XLS)", tag:"baixa arquivo", tagCls:"info",
+      desc:"Na tela Times, baixa um arquivo Excel (.xls) com o placar de cada set e as estatísticas de cada jogador da partida." },
+    { name:"Apagar dados", tag:"irreversível", tagCls:"bad",
+      desc:"Botão vermelho na tela Times, logo abaixo de \"Exportar dados\". Apaga permanentemente todos os times, a partida atual, os sets encerrados e os dados salvos na nuvem — pede confirmação antes de apagar." },
+  ]},
 ];
 
 let state = null;      // full match state
@@ -1234,15 +1262,16 @@ function defaultState(){
 }
 
 /* ---------------- persistence ----------------
-   Os dados da partida ficam apenas na memória deste dispositivo/aba.
-   O salvamento na nuvem só acontece quando o usuário toca no botão ☁ (manual). */
+   Os dados da partida ficam na memória deste dispositivo/aba enquanto você
+   usa o app. O salvamento na nuvem acontece automaticamente a cada 30
+   minutos (se houver alterações não salvas) ou quando o usuário toca no
+   botão ☁ manualmente — não é mais salvo a cada ação/ponto marcado. */
 function delay(ms){ return new Promise(res=>setTimeout(res,ms)); }
 
 let hasUnsavedChanges = false;
 function markDirty(){
   hasUnsavedChanges = true;
   updateSaveIndicator();
-  scheduleAutosave();
 }
 function markClean(){
   hasUnsavedChanges = false;
@@ -1471,7 +1500,6 @@ function showSetup(){
   $('#setupScreen').classList.remove('hidden');
   $('#matchScreen').classList.add('hidden');
   $('#bottomBarWrap').classList.add('hidden');
-  $('#btnEditTeams').classList.add('hidden');
   renderTeamsSetup();
   renderMatchupSelectors();
 
@@ -1568,13 +1596,6 @@ $('#btnStart').addEventListener('click', ()=>{
 });
 
 let editEntryActiveA = null, editEntryActiveB = null;
-
-$('#btnEditTeams').addEventListener('click', ()=>{
-  cameFromMatch = true;
-  editEntryActiveA = state.activeAId;
-  editEntryActiveB = state.activeBId;
-  showSetup();
-});
 
 $('#btnBackToMatch').addEventListener('click', ()=>{
   cameFromMatch = false;
@@ -1947,7 +1968,6 @@ function showMatch(){
   $('#setupScreen').classList.add('hidden');
   $('#matchScreen').classList.remove('hidden');
   $('#bottomBarWrap').classList.remove('hidden');
-  $('#btnEditTeams').classList.remove('hidden');
   renderAll();
 }
 
@@ -2150,6 +2170,44 @@ function openArchive(){
 $('#btnArchive').addEventListener('click', openArchive);
 
 $('#btnExportXls').addEventListener('click', exportMatchXls);
+
+function showDeleteAllDataDialog(){
+  const overlay = document.createElement('div');
+  overlay.className = 'celebrate';
+  overlay.innerHTML = `
+    <h2 style="font-size:30px; color:var(--bad);">⚠️ Apagar todos os dados?</h2>
+    <p style="font-size:16px; line-height:1.5; max-width:340px;">
+      Isso vai apagar <b>permanentemente</b> todos os times, a partida atual,
+      o placar, os sets encerrados e as estatísticas — inclusive os dados
+      salvos na nuvem. <b>Essa ação não pode ser desfeita.</b>
+    </p>
+    <div style="display:flex; gap:10px;">
+      <button class="cel-btn" id="deleteAllCancelBtn" style="background:var(--bg-elev-2); color:var(--text); border:1px solid var(--line);">Cancelar</button>
+      <button class="cel-btn" id="deleteAllOkBtn" style="background:var(--bad); color:#2a0d12;">Apagar tudo</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#deleteAllCancelBtn').addEventListener('click', ()=> overlay.remove());
+  overlay.querySelector('#deleteAllOkBtn').addEventListener('click', async ()=>{
+    overlay.remove();
+    await deleteAllData();
+  });
+}
+
+async function deleteAllData(){
+  state = defaultState();
+  setArchive = [];
+  undoStack = [];
+  redoStack = [];
+  cameFromMatch = false;
+  activeTab = 'court';
+  await cloudStorage.delete('volei_match_current');
+  markClean();
+  showSetup();
+  showToast('Todos os dados foram apagados.');
+}
+
+$('#btnDeleteAllData').addEventListener('click', showDeleteAllDataDialog);
 
 $('#btnSpeech').addEventListener('click', ()=>{
   speechEnabled = !speechEnabled;
@@ -2913,14 +2971,11 @@ function escapeHtml(str){
         dados na nuvem e pergunta se o usuário realmente quer fechar.
    O app nunca é encerrado sem que o salvamento tenha sido concluído. */
 
-let autosaveTimer = null;
-function scheduleAutosave(){
-  if(autosaveTimer) clearTimeout(autosaveTimer);
-  autosaveTimer = setTimeout(()=>{
-    autosaveTimer = null;
-    if(hasUnsavedChanges) saveState();
-  }, 2500);
-}
+/* Salvamento automático periódico: a cada 30 minutos, se houver alterações
+   não salvas. Não dispara mais logo após cada ação/ponto marcado. */
+setInterval(()=>{
+  if(hasUnsavedChanges) saveState();
+}, 30*60*1000);
 
 function closeTopSheet(){
   const sheet = $('.sheet-backdrop');
