@@ -106,6 +106,51 @@ body{min-height:100vh; display:flex; flex-direction:column;}
 
 #btnWidthAdjust{font-size:12px; letter-spacing:-2px;}
 .changelog-sheet .sheet{max-height:78vh;}
+
+/* ===== Help sheet (regras e comandos de voz) ===== */
+.help-sheet .sheet{max-height:86vh; display:flex; flex-direction:column;}
+.help-search{
+  width:100%; background:var(--bg-elev-2); border:1px solid var(--line); color:var(--text);
+  padding:10px 13px; border-radius:11px; font-size:14.5px; font-family:'Inter',sans-serif; outline:none;
+  margin-bottom:12px; flex-shrink:0;
+}
+.help-search:focus{border-color:var(--teamA);}
+.help-tabs{display:flex; gap:7px; margin-bottom:14px; flex-wrap:wrap; flex-shrink:0;}
+.help-tab-btn{
+  background:var(--bg-elev-2); border:1px solid var(--line); color:var(--muted);
+  font-size:11.5px; font-weight:700; padding:6px 12px; border-radius:20px; cursor:pointer;
+}
+.help-tab-btn.active{background:var(--good-dim); border-color:rgba(55,201,138,0.4); color:var(--good);}
+.help-scroll{overflow-y:auto; flex:1;}
+.help-section{margin-bottom:18px;}
+.help-section-title{
+  font-family:'Teko',sans-serif; font-size:21px; font-weight:600; color:var(--teamA);
+  letter-spacing:0.3px; margin:0 0 8px; display:flex; align-items:center; gap:7px;
+}
+.help-card{background:var(--bg-elev-2); border:1px solid var(--line); border-radius:12px; padding:2px 0; overflow:hidden;}
+.help-item{padding:11px 14px; border-bottom:1px solid var(--line);}
+.help-item:last-child{border-bottom:none;}
+.help-item-head{display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:3px; flex-wrap:wrap;}
+.help-item-name{font-weight:700; font-size:13.5px; color:var(--text);}
+.help-item-tag{
+  font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; text-transform:uppercase;
+  padding:2px 6px; border-radius:6px; letter-spacing:0.3px; flex-shrink:0;
+}
+.help-tag-good{background:var(--good-dim); color:var(--good);}
+.help-tag-bad{background:var(--bad-dim); color:var(--bad);}
+.help-tag-info{background:var(--bg-elev); color:var(--muted);}
+.help-item-desc{font-size:12.5px; color:var(--muted); line-height:1.5;}
+.help-item-say{
+  font-family:'JetBrains Mono',monospace; font-size:11.5px; background:var(--bg-elev);
+  border-radius:7px; padding:5px 8px; margin-top:5px; color:var(--teamA); display:inline-block;
+}
+.help-item-variants{font-size:11px; color:var(--muted-2); margin-top:4px;}
+.help-note{
+  background:var(--bg-elev-2); border:1px dashed var(--line); border-radius:11px;
+  padding:11px 13px; font-size:11.5px; color:var(--muted); line-height:1.5; margin-top:4px;
+}
+.help-note b{color:var(--text);}
+.help-empty{text-align:center; color:var(--muted-2); font-size:12.5px; padding:24px 0;}
 .changelog-entry{border-bottom:1px solid var(--line); padding:12px 2px;}
 .changelog-entry:last-child{border-bottom:none;}
 .changelog-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px;}
@@ -485,6 +530,7 @@ table.stats-table tr:last-child td{border-bottom:none;}
   <div class="topbar-actions">
     <div class="icon-btn" id="btnSaveCloud" title="Salvar na nuvem (opcional)">☁<span class="unsaved-dot" id="unsavedDot"></span></div>
     <div class="icon-btn" id="btnArchive" title="Partidas encerradas">📋</div>
+    <div class="icon-btn" id="btnHelp" title="Ajuda: regras e comandos de voz">❓</div>
     <div class="icon-btn" id="btnSpeech" title="Narração por voz: ligada">🔊</div>
     <div class="icon-btn" id="btnVoiceCmd" title="Marcar pontos por comando de voz">🎤</div>
     <div class="icon-btn" id="btnWidthAdjust" title="Ajustar largura e altura da tela">↕↔</div>
@@ -624,8 +670,17 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.41.0";
+const APP_VERSION = "3.44.0";
 const CHANGELOG = [
+  { version:"3.44.0", date:"27/07/2026", changes:[
+    "Comandos de voz com 2 ou mais palavras agora reconhecem a primeira palavra pelo prefixo, mesmo com transcrições bem diferentes das já cadastradas: começando com \"at\" vira \"ataque\", \"sa\" vira \"saque\", \"pi\" vira \"pingada\", \"bl\" vira \"bloqueio\", \"ei\" vira \"ace\", \"er\" vira \"erro\", \"pa\" vira \"passe\" e \"in\" vira \"infração\"."
+  ]},
+  { version:"3.43.0", date:"27/07/2026", changes:[
+    "Sacador errado agora bloqueia a marcação: se o jogador marcado como sacador for diferente do esperado pelo rodízio automático, o app não registra mais o saque — ele avisa (na tela e por voz) quem deveria estar sacando e a marcação não é feita. Antes era só um aviso e a marcação passava normalmente."
+  ]},
+  { version:"3.42.0", date:"27/07/2026", changes:[
+    "Adicionado botão de ajuda (❓) na barra superior: abre um guia consultável com todas as regras do jogo e todos os comandos de voz (ações, informativos e de controle), com busca e filtro por categoria. Esse guia deve ser atualizado sempre que uma nova regra ou comando de voz for criado."
+  ]},
   { version:"3.41.0", date:"25/07/2026", changes:[
     "Agora não é mais possível marcar dois saques seguidos, nem marcar um ponto sem antes confirmar o saque — antes eram só avisos, agora a marcação é bloqueada de verdade. A única exceção é o botão \"+1 direto\", que continua livre dessa exigência (para pontos rápidos sem rastrear jogador)."
   ]},
@@ -954,6 +1009,50 @@ const CHANGELOG = [
   { version:"1.0.0", date:"25/07/2026", changes:[
     "Lançamento do app: cadastro de times e elenco, placar ao vivo com troca automática de saque, marcação de ações por jogador (ataque, bloqueio, pingada, ace, erros e infrações), estatísticas por atleta, histórico de jogadas, desfazer e fechamento automático de sets e partida."
   ]}
+];
+
+/* ---------------- guia de ajuda (regras e comandos de voz) ----------------
+   Toda vez que uma nova regra de negócio ou um novo comando de voz for
+   criado no app, adiciona um novo item no grupo correspondente abaixo
+   (ou cria um grupo novo), para o guia ficar sempre atualizado. */
+const HELP_DATA = [
+  { id:"regras", icon:"📋", title:"Regras do jogo", items:[
+    { name:"Ace só vale para quem sacou", tag:"bloqueia", tagCls:"bad",
+      desc:"Se você marcar \"Ace\" para um jogador diferente de quem está sacando no momento, o app bloqueia a marcação e avisa (na tela e por voz) quem foi o sacador correto." },
+    { name:"Não dá para marcar ponto sem confirmar o saque", tag:"bloqueia", tagCls:"bad",
+      desc:"Ataque, bloqueio, erro etc. só podem ser marcados depois que o saque da jogada foi confirmado (botão \"Saq\" ou comando de voz \"Saque [nome]\"). Exceção: o botão \"+1 direto\" (ponto direto) não exige isso." },
+    { name:"Não dá para marcar dois saques seguidos", tag:"bloqueia", tagCls:"bad",
+      desc:"Se um saque já foi marcado e nenhum ponto aconteceu ainda, o app impede marcar outro saque em seguida. É preciso fechar a jogada (marcar o ponto) antes de sacar de novo." },
+    { name:"Saque tem que ser de um jogador do time que está sacando", tag:"bloqueia", tagCls:"bad",
+      desc:"Se o saque for marcado para um jogador do time que não está sacando, o app bloqueia e informa qual time deveria estar sacando." },
+    { name:"Sacador errado (rodízio)", tag:"bloqueia", tagCls:"bad",
+      desc:"Se o jogador marcado como sacador for diferente do esperado pelo rodízio automático, o app bloqueia a marcação e avisa (na tela e por voz) quem deveria estar sacando." },
+    { name:"Aviso de saque esquecido", tag:"só avisa", tagCls:"info",
+      desc:"Se um ponto for marcado sem que o saque daquela jogada tenha sido registrado, o app mostra um aviso na tela e fala \"Atenção! Marque o saque\"." },
+    { name:"Rally scoring", tag:"placar", tagCls:"info",
+      desc:"Todo ponto marcado, de qualquer time, soma no placar imediatamente. Quem ganha o ponto passa a ser o time que saca na jogada seguinte." },
+    { name:"Senha para encerrar a partida", tag:"segurança", tagCls:"info",
+      desc:"Encerrar a partida (voltar para a tela de Nova Partida) exige confirmar uma senha antes." },
+  ]},
+  { id:"acao", icon:"🎤", title:"Comandos de voz — ações de jogo", items:[
+    { name:"Saque", tag:"estatística", tagCls:"good", say:"Saque [nome]", variants:"Variações aceitas: \"sac\"" },
+    { name:"Ataque", tag:"+1 ponto", tagCls:"good", say:"Ataque [nome]", variants:"Também aceita \"ataque certo [nome]\"" },
+    { name:"Pingada / largada", tag:"+1 ponto", tagCls:"good", say:"Pingada [nome]", variants:"Também aceita: \"larga\", \"largada\", \"pingar\", \"pingo\"" },
+    { name:"Bloqueio", tag:"+1 ponto", tagCls:"good", say:"Bloqueio [nome]", variants:"Também aceita: \"bloco\", \"block\"" },
+    { name:"Ace", tag:"+1 ponto", tagCls:"good", say:"Ace [nome]", variants:"Só é aceito para quem sacou na jogada. Muitas variações de transcrição aceitas (eice, eis, aice, ecis, entre outras)." },
+    { name:"Ataque errado", tag:"ponto adversário", tagCls:"bad", say:"Ataque errado [nome]", variants:"Também aceita: \"erro de ataque\", \"erro ataque\", \"ataque erro\"" },
+    { name:"Saque errado", tag:"ponto adversário", tagCls:"bad", say:"Saque errado [nome]", variants:"Também aceita: \"erro de saque\", \"erro saque\", \"saque erro\"" },
+    { name:"Passe errado", tag:"ponto adversário", tagCls:"bad", say:"Passe errado [nome]", variants:"Também aceita: \"erro de passe\", \"erro passe\", \"passe erro\"" },
+    { name:"Infração", tag:"ponto adversário", tagCls:"bad", say:"Infração [nome]", variants:"Também aceita: \"falta\"" },
+    { name:"Ponto direto", tag:"+1 ponto", tagCls:"good", say:"Ponto direto [nome do time]", variants:"Precisa falar o nome exato do time, não exige saque confirmado antes." },
+  ], note:"💡 O reconhecimento de nome tolera pequenas variações de pronúncia/transcrição (ex.: \"João\" também reconhece \"Jão\"). A palavra da ação precisa vir no <b>início</b> da frase — falas que não começam com uma palavra de comando são ignoradas silenciosamente. Além disso, quando o comando tem 2 ou mais palavras, a <b>primeira palavra</b> já é reconhecida só pelo prefixo: começou com \"at\" vira \"ataque\", \"sa\" vira \"saque\", \"pi\" vira \"pingada\", \"bl\" vira \"bloqueio\", \"ei\" vira \"ace\", \"er\" vira \"erro\", \"pa\" vira \"passe\", \"in\" vira \"infração\"." },
+  { id:"info", icon:"🗣️", title:"Comandos de voz — informativos", items:[
+    { name:"Placar", tag:"fala em voz alta", tagCls:"info", say:"Placar", variants:"Funciona em qualquer posição da frase. O app fala o placar atual dos dois times." },
+    { name:"Última marcação", tag:"fala em voz alta", tagCls:"info", say:"Última marcação", variants:"Também aceita: \"qual foi a última marcação\", \"último histórico\", \"última histórico\"" },
+  ]},
+  { id:"controle", icon:"⏪", title:"Comandos de voz — controle", items:[
+    { name:"Desfazer", tag:"desfaz última ação", tagCls:"info", say:"Desfazer", variants:"Equivale a tocar o botão de desfazer." },
+  ]},
 ];
 
 let state = null;      // full match state
@@ -1726,6 +1825,85 @@ function openChangelog(){
 
 $('#btnVersion').addEventListener('click', openChangelog);
 
+/* ---------------- guia de ajuda UI ---------------- */
+function renderHelpBody(filterId, query){
+  const q = normalizeVoiceText(query||'').trim();
+  let anyItem = false;
+  const sectionsHtml = HELP_DATA.map(group=>{
+    if(filterId!=='all' && group.id!==filterId) return '';
+    const itemsHtml = group.items.map(it=>{
+      const haystack = normalizeVoiceText([it.name, it.tag, it.desc||'', it.say||'', it.variants||''].join(' '));
+      if(q && !haystack.includes(q)) return '';
+      anyItem = true;
+      return `
+        <div class="help-item">
+          <div class="help-item-head">
+            <span class="help-item-name">${escapeHtml(it.name)}</span>
+            <span class="help-item-tag help-tag-${it.tagCls}">${escapeHtml(it.tag)}</span>
+          </div>
+          ${it.desc ? `<div class="help-item-desc">${escapeHtml(it.desc)}</div>` : ''}
+          ${it.say ? `<div class="help-item-say">"${escapeHtml(it.say)}"</div>` : ''}
+          ${it.variants ? `<div class="help-item-variants">${escapeHtml(it.variants)}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+    if(!itemsHtml) return '';
+    return `
+      <div class="help-section">
+        <div class="help-section-title">${group.icon} ${escapeHtml(group.title)}</div>
+        <div class="help-card">${itemsHtml}</div>
+        ${group.note ? `<div class="help-note">${group.note}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+  return anyItem ? sectionsHtml : '<div class="help-empty">Nada encontrado.</div>';
+}
+
+function openHelp(){
+  const backdrop = document.createElement('div');
+  backdrop.className = 'sheet-backdrop help-sheet';
+  backdrop.id = 'helpBackdrop';
+  let filterId = 'all';
+  let query = '';
+  backdrop.innerHTML = `
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <div class="who">Ajuda</div>
+        <div class="close-x" id="helpClose">✕</div>
+      </div>
+      <input type="text" class="help-search" id="helpSearch" placeholder="Buscar regra ou comando de voz...">
+      <div class="help-tabs" id="helpTabs">
+        <div class="help-tab-btn active" data-filter="all">Tudo</div>
+        ${HELP_DATA.map(g=>`<div class="help-tab-btn" data-filter="${g.id}">${escapeHtml(g.title.replace('Comandos de voz — ','Voz · ').replace('Regras do jogo','Regras'))}</div>`).join('')}
+      </div>
+      <div class="help-scroll" id="helpScroll">${renderHelpBody(filterId, query)}</div>
+    </div>
+  `;
+  document.body.appendChild(backdrop);
+
+  const scrollEl = backdrop.querySelector('#helpScroll');
+  const searchEl = backdrop.querySelector('#helpSearch');
+  const tabsEl = backdrop.querySelector('#helpTabs');
+
+  function refresh(){ scrollEl.innerHTML = renderHelpBody(filterId, query); }
+
+  searchEl.addEventListener('input', ()=>{ query = searchEl.value; refresh(); });
+  tabsEl.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.help-tab-btn');
+    if(!btn) return;
+    tabsEl.querySelectorAll('.help-tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    filterId = btn.dataset.filter;
+    refresh();
+  });
+
+  backdrop.addEventListener('click', (e)=>{
+    if(e.target===backdrop || e.target.closest('#helpClose')) backdrop.remove();
+  });
+}
+$('#btnHelp').addEventListener('click', openHelp);
+
 $('#btnSaveCloud').addEventListener('click', ()=>{
   saveState();
 });
@@ -1993,6 +2171,33 @@ function applyVoiceSynonyms(text){
   return text;
 }
 
+// quando o comando de voz tem 2 ou mais palavras, a PRIMEIRA palavra é
+// entendida pelo prefixo com que começa (cobre qualquer variação de
+// transcrição que comece assim, mesmo que não esteja na lista de sinônimos):
+// "at"->ataque, "sa"->saque, "pi"->pingada, "bl"->bloqueio, "ei"->ace,
+// "er"->erro, "pa"->passe, "in"->infração
+const VOICE_FIRST_WORD_PREFIXES = [
+  {prefix:'at', word:'ataque'},
+  {prefix:'sa', word:'saque'},
+  {prefix:'pi', word:'pingada'},
+  {prefix:'bl', word:'bloqueio'},
+  {prefix:'ei', word:'ace'},
+  {prefix:'er', word:'erro'},
+  {prefix:'pa', word:'passe'},
+  {prefix:'in', word:'infracao'},
+];
+function applyFirstWordPrefix(text){
+  const words = text.split(/\s+/).filter(Boolean);
+  if(words.length < 2) return text; // regra só vale com 2+ palavras no comando
+  const first = words[0];
+  const match = VOICE_FIRST_WORD_PREFIXES.find(m => first.startsWith(m.prefix));
+  if(match){
+    words[0] = match.word;
+    return words.join(' ');
+  }
+  return text;
+}
+
 // ordem importa: frases mais específicas primeiro, para não confundir
 // "ataque errado" com "ataque", "saque errado" com "saque" etc.
 const VOICE_ACTION_PHRASES = [
@@ -2092,7 +2297,7 @@ function speakLastMarkingCommand(){
 }
 
 function processVoiceCommand(rawText){
-  const text = applyVoiceSynonyms(normalizeVoiceText(rawText));
+  const text = applyVoiceSynonyms(applyFirstWordPrefix(normalizeVoiceText(rawText)));
 
   // comandos informativos — funcionam em qualquer posição da fala,
   // não dependem de começar com uma palavra-gatilho de ação
@@ -2271,6 +2476,16 @@ function applyAction(team, player, actionKey){
 
     const expectedId = state.servingPlayerId;
     const isWrongServer = !isFirstServeEver && expectedId && expectedId !== player.id;
+    if(isWrongServer){
+      const expectedPlayer = findPlayerAnywhereById(expectedId);
+      const expectedName = expectedPlayer ? expectedPlayer.name : 'outro jogador';
+      state.errorMessage = 'Sacador errado! Quem deve sacar agora é ' + expectedName + '.';
+      speak('Atenção! Sacador errado. Quem saca é ' + expectedName + '.');
+      markDirty();
+      renderAll();
+      return;
+    }
+
     player.stats.saqueCerto += 1;
     state.errorMessage = null; // marcar o saque agora corrige o aviso de "saque esquecido"
     if(isFirstServeEver){
@@ -2280,11 +2495,6 @@ function applyAction(team, player, actionKey){
       if(team==='A'){ state.rotationIndexA = idx>=0 ? idx : 0; state.rotationStartedA = true; }
       else { state.rotationIndexB = idx>=0 ? idx : 0; state.rotationStartedB = true; }
       speak(STAT_ONLY.title + ' ' + player.name);
-    } else if(isWrongServer){
-      const expectedPlayer = findPlayerAnywhereById(expectedId);
-      const expectedName = expectedPlayer ? expectedPlayer.name : 'outro jogador';
-      state.errorMessage = 'Sacador errado! O certo era ' + expectedName + '.';
-      speak('Atenção! Sacador errado.');
     } else {
       speak(STAT_ONLY.title + ' ' + player.name);
     }
