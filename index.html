@@ -1162,6 +1162,7 @@ let hasUnsavedChanges = false;
 function markDirty(){
   hasUnsavedChanges = true;
   updateSaveIndicator();
+  scheduleAutosave();
 }
 function markClean(){
   hasUnsavedChanges = false;
@@ -2796,6 +2797,125 @@ function showErrorToast(msg){
 function escapeHtml(str){
   return String(str||'').replace(/[&<>"']/g, s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
 }
+
+/* ---------------- botão voltar (celular / notebook) ----------------
+   Objetivo: o botão/gesto de voltar do dispositivo nunca deve sair do
+   app "de repente". Prioridade do que o voltar faz:
+     1) fecha um sheet aberto (Ajuda, Versões, Partidas encerradas);
+     2) fecha um diálogo aberto (confirmação, senha);
+     3) se estiver editando os times a partir de uma partida em
+        andamento, volta para a partida;
+     4) se houver uma aba anterior (Quadra/Estatísticas/Histórico),
+        volta para ela;
+     5) se não houver mais nada para voltar dentro do app, salva os
+        dados na nuvem e pergunta se o usuário realmente quer fechar.
+   O app nunca é encerrado sem que o salvamento tenha sido concluído. */
+
+let autosaveTimer = null;
+function scheduleAutosave(){
+  if(autosaveTimer) clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(()=>{
+    autosaveTimer = null;
+    if(hasUnsavedChanges) saveState();
+  }, 2500);
+}
+
+function closeTopSheet(){
+  const sheet = $('.sheet-backdrop');
+  if(sheet){ sheet.remove(); return true; }
+  return false;
+}
+function closeTopDialog(){
+  const dlg = $('.celebrate');
+  if(dlg){ dlg.remove(); return true; }
+  return false;
+}
+
+let closeConfirmOpen = false;
+let allowRealExit = false;
+
+async function handleBackNavigation(){
+  if(closeConfirmOpen) return; // já tem a pergunta de fechar na tela
+
+  if(closeTopSheet()) return;
+  if(closeTopDialog()) return;
+
+  const setupVisible = $('#setupScreen') && !$('#setupScreen').classList.contains('hidden');
+  if(cameFromMatch && setupVisible){
+    cameFromMatch = false;
+    showMatch();
+    return;
+  }
+
+  if(state && state.started && tabStack.length>0){
+    const prev = tabStack.pop();
+    switchTab(prev, false);
+    return;
+  }
+
+  await confirmAppClose();
+}
+
+async function confirmAppClose(){
+  if(closeConfirmOpen) return;
+  closeConfirmOpen = true;
+
+  const saved = await saveState(); // sempre tenta salvar antes de perguntar
+
+  const overlay = document.createElement('div');
+  overlay.className = 'celebrate';
+  overlay.innerHTML = `
+    <h2 style="font-size:26px;">Fechar aplicativo?</h2>
+    <p>${saved ? 'Seus dados foram salvos na nuvem.' : 'Não foi possível confirmar o salvamento na nuvem agora. Verifique sua conexão antes de sair.'}</p>
+    <div style="display:flex; gap:10px;">
+      <button class="cel-btn" id="closeCancelBtn" style="background:var(--bg-elev-2); color:var(--text); border:1px solid var(--line);">Continuar no app</button>
+      <button class="cel-btn" id="closeOkBtn" style="background:var(--bad);">Fechar app</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#closeCancelBtn').addEventListener('click', ()=>{
+    overlay.remove();
+    closeConfirmOpen = false;
+  });
+  overlay.querySelector('#closeOkBtn').addEventListener('click', async ()=>{
+    // nunca fecha sem garantir que os dados estão salvos
+    if(hasUnsavedChanges){
+      const ok = await saveState();
+      if(!ok){
+        showErrorToast('Não foi possível salvar. Tente novamente antes de fechar.');
+        return;
+      }
+    }
+    overlay.remove();
+    closeConfirmOpen = false;
+    allowRealExit = true;
+    showToast('Dados salvos. Pode fechar o app com segurança.');
+    try{ window.close(); }catch(e){ /* navegador pode bloquear */ }
+    setTimeout(()=>{ if(allowRealExit) history.back(); }, 30);
+  });
+}
+
+function trapBack(){
+  history.pushState({voleiTrap:true}, '');
+}
+
+window.addEventListener('popstate', ()=>{
+  if(allowRealExit) return; // deixa a navegação/fechamento real acontecer
+  trapBack(); // neutraliza o "voltar" do navegador — o app continua aberto
+  handleBackNavigation();
+});
+
+window.addEventListener('beforeunload', (e)=>{
+  if(hasUnsavedChanges){
+    saveState(); // tentativa de salvar mesmo em fechamentos que não passam pelo botão voltar (ex: fechar aba, atualizar a página)
+    e.preventDefault();
+    e.returnValue = '';
+    return '';
+  }
+});
+
+trapBack(); // arma a armadilha assim que o app carrega
 
 /* ---------------- init ---------------- */
 renderVersionBadge();
