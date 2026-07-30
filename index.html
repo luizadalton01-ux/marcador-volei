@@ -778,8 +778,11 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.70.3";
+const APP_VERSION = "3.70.4";
 const CHANGELOG = [
+  { version:"3.70.4", date:"30/07/2026", changes:[
+    "Comando de voz: qualquer fala que comece com \"sa\" (ex.: \"Sa João\", sem precisar dizer \"errado\") agora é reconhecida como o comando de saque errado, já que não existe mais ação manual de saque simples."
+  ]},
   { version:"3.70.3", date:"30/07/2026", changes:[
     "Adicionada a regra: o ponto de \"Saque errado\" só pode ser marcado para o jogador que sacou. Se for marcado para outro jogador, a marcação é bloqueada e o app avisa (mensagem + voz) qual jogador fez o saque."
   ]},
@@ -1268,7 +1271,7 @@ const HELP_DATA = [
     { name:"Bloqueio", tag:"+1 ponto", tagCls:"good", say:"Bloqueio [nome]", variants:"Também aceita: \"bloco\", \"block\"" },
     { name:"Ace", tag:"+1 ponto", tagCls:"good", say:"Ace [nome]", variants:"Só é aceito para quem sacou na jogada. Muitas variações de transcrição aceitas (eice, eis, aice, ecis, entre outras)." },
     { name:"Ataque errado", tag:"ponto adversário", tagCls:"bad", say:"Ataque errado [nome]", variants:"Também aceita: \"erro de ataque\", \"erro ataque\", \"ataque erro\"" },
-    { name:"Saque errado", tag:"ponto adversário", tagCls:"bad", say:"Saque errado [nome]", variants:"Só é aceito para quem sacou na jogada. Também aceita: \"erro de saque\", \"erro saque\", \"saque erro\"" },
+    { name:"Saque errado", tag:"ponto adversário", tagCls:"bad", say:"Saque errado [nome]", variants:"Só é aceito para quem sacou na jogada. Qualquer fala começando com \"sa\" (ex.: \"Saque [nome]\", \"Sac [nome]\") já é reconhecida como saque errado, sem precisar dizer \"errado\". Também aceita: \"erro de saque\", \"erro saque\", \"saque erro\"" },
     { name:"Passe errado", tag:"ponto adversário", tagCls:"bad", say:"Passe errado [nome]", variants:"Também aceita: \"erro de passe\", \"erro passe\", \"passe erro\"" },
     { name:"Infração", tag:"ponto adversário", tagCls:"bad", say:"Infração [nome]", variants:"Também aceita: \"falta\"" },
     { name:"Ponto direto", tag:"+1 ponto", tagCls:"good", say:"Ponto direto [nome do time]", variants:"Precisa falar o nome exato do time, não exige saque confirmado antes." },
@@ -2986,8 +2989,9 @@ function applyVoiceSynonyms(text){
 // quando o comando de voz tem 2 ou mais palavras, a PRIMEIRA palavra é
 // entendida pelo prefixo com que começa (cobre qualquer variação de
 // transcrição que comece assim, mesmo que não esteja na lista de sinônimos):
-// "at"->ataque, "sa"->saque, "pi"->pingada, "bl"->bloqueio, "ei"->ace,
-// "er"->erro, "pa"->passe, "in"->infração
+// "at"->ataque, "sa"->saque (tratado como saque errado, já que não existe
+// mais ação manual de saque simples), "pi"->pingada, "bl"->bloqueio,
+// "ei"->ace, "er"->erro, "pa"->passe, "in"->infração
 const VOICE_FIRST_WORD_PREFIXES = [
   {prefix:'at', word:'ataque'},
   {prefix:'sa', word:'saque'},
@@ -3012,9 +3016,12 @@ function applyFirstWordPrefix(text){
 
 // ordem importa: frases mais específicas primeiro, para não confundir
 // "ataque errado" com "ataque", "saque errado" com "saque" etc.
+// "saque" sozinho (sem a palavra "errado") também conta como saque errado,
+// já que não existe mais ação manual de saque simples — todo comando que
+// comece com "sa" (via prefixo acima) é entendido como saque errado.
 const VOICE_ACTION_PHRASES = [
   {key:'ataqueErrado', phrases:['ataque errado','erro de ataque','erro ataque','ataque erro']},
-  {key:'saqueErrado',  phrases:['saque errado','erro de saque','erro saque','saque erro']},
+  {key:'saqueErrado',  phrases:['saque errado','erro de saque','erro saque','saque erro','saque']},
   {key:'passeErrado',  phrases:['passe errado','erro de passe','erro passe','passe erro']},
   {key:'infracao',     phrases:['infracao','falta']},
   {key:'bloqueio',     phrases:['bloqueio','bloco','block']},
