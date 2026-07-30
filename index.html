@@ -224,6 +224,11 @@ label.field-label{display:block; font-size:11px; text-transform:uppercase; lette
   width:34px;height:34px;flex-shrink:0; border-radius:9px; border:1px solid var(--line); background:var(--bg-elev-2);
   color:var(--bad); font-size:16px; cursor:pointer;
 }
+.start-serve-radio{
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  width:34px; height:34px; border-radius:9px; border:1px solid var(--line); background:var(--bg-elev-2); cursor:pointer;
+}
+.start-serve-radio input{width:16px; height:16px; accent-color:var(--good); cursor:pointer; margin:0;}
 .add-player-btn{
   width:100%; padding:10px; border-radius:10px; border:1px dashed var(--line); background:transparent;
   color:var(--muted); font-size:14px; cursor:pointer; margin-top:2px; font-weight:600;
@@ -239,11 +244,17 @@ label.field-label{display:block; font-size:11px; text-transform:uppercase; lette
   margin:0 0 8px; cursor:pointer; line-height:1.3;
 }
 .libero-ce-toggle input{width:14px; height:14px; flex-shrink:0; accent-color:var(--teamA); cursor:pointer;}
+.match-config-card .libero-ce-toggle{font-size:13px; margin-bottom:4px;}
+.match-config-card select{margin-bottom:2px;}
 .team-card .field-label{font-size:9px; margin:6px 0 4px;}
+.team-card .team-size-select{padding:7px 8px; font-size:12px; border-radius:8px;}
+.roster-hint{font-size:9.5px; color:var(--muted-2); margin:0 0 6px; line-height:1.35;}
 .team-card .player-row{gap:4px; margin-bottom:5px;}
 .team-card .player-row input[type=text]{padding:6px 6px; font-size:11px; border-radius:7px;}
 .team-card .player-row select{width:38px; flex-shrink:0; padding:6px 1px; font-size:9.5px; border-radius:7px;}
 .team-card .player-row .rm-btn{width:22px; height:22px; font-size:12px; border-radius:6px; flex-shrink:0;}
+.team-card .player-row .start-serve-radio{width:22px; height:22px; border-radius:6px; flex-shrink:0;}
+.team-card .player-row .start-serve-radio input{width:13px; height:13px;}
 .team-card .add-player-btn{padding:6px; font-size:11px;}
 .rm-team-btn{
   background:transparent; border:1px solid var(--line); color:var(--bad); font-size:9.5px; font-weight:700;
@@ -329,6 +340,18 @@ label.field-label{display:block; font-size:11px; text-transform:uppercase; lette
 .action-alert.serve{background:rgba(244,199,68,0.18); color:#f4c744;}
 .action-alert.point{background:var(--good-dim); color:var(--good);}
 .action-alert.wrong{background:var(--bad-dim); color:var(--bad);}
+
+.first-serve-config{
+  display:flex; align-items:center; gap:8px; margin:8px 12px 0; padding:8px 10px;
+  background:var(--bg-elev); border:1px solid var(--line); border-radius:11px; flex-wrap:wrap;
+}
+.first-serve-label{font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.3px; flex-shrink:0;}
+.first-serve-option{
+  display:flex; align-items:center; gap:5px; font-size:12.5px; font-weight:600; color:var(--muted);
+  cursor:pointer; padding:4px 9px; border-radius:8px; border:1px solid var(--line); background:var(--bg-elev-2);
+}
+.first-serve-option input{width:14px; height:14px; accent-color:var(--good); cursor:pointer; margin:0;}
+.first-serve-option.checked{border-color:rgba(55,201,138,0.4); color:var(--good); background:var(--good-dim);}
 
 /* ===== Tabs ===== */
 .tabs{display:flex; margin:14px 12px 0; background:var(--bg-elev); border:1px solid var(--line); border-radius:12px; padding:3px;}
@@ -539,6 +562,7 @@ table.stats-table tr:last-child td{border-bottom:none;}
 
   .bottombar-wrap{order:5; padding:6px 10px calc(6px + env(safe-area-inset-bottom)); margin:32px auto 16px;}
   .bar-btn{padding:9px 4px; font-size:11.5px;}
+  .first-serve-config{order:5;}
 }
 </style>
 </head>
@@ -591,6 +615,14 @@ table.stats-table tr:last-child td{border-bottom:none;}
 
     <div id="teamsContainer"></div>
     <button class="add-team-btn" id="btnAddTeam">+ adicionar time</button>
+
+    <div class="card match-config-card">
+      <h2>Configurações da partida</h2>
+      <label class="libero-ce-toggle">
+        <input type="checkbox" id="liberoCeCheckbox">
+        Líbero saca no lugar do Central (CE não saca)
+      </label>
+    </div>
 
     <button class="start-btn secondary hidden" id="btnBackToMatch">Voltar para a partida</button>
     <button class="start-btn" id="btnStart">Iniciar Partida</button>
@@ -645,6 +677,9 @@ table.stats-table tr:last-child td{border-bottom:none;}
         <button class="bar-btn primary" id="btnEndSet">Próximo set</button>
       </div>
     </div>
+
+    <!-- Escolha manual de qual time começa sacando em cada set (não alterna mais sozinho) -->
+    <div class="first-serve-config" id="firstServeConfig"></div>
 
     <!-- Estatísticas / Histórico — ainda mais abaixo, depois das ações -->
     <div class="tabs">
@@ -719,7 +754,11 @@ const cloudStorage = {
 (function(){
 
 const POSITIONS = ["LE","P1","CE","OP","P2","LI"];
-const POS_LABELS = {LE:"Levantador", P1:"Ponteiro 1", CE:"Central", OP:"Oposto", P2:"Ponteiro 2", LI:"Líbero"};
+const POS_LABELS = {LE:"Levantador", P1:"Ponteiro 1", CE:"Central", OP:"Oposto", P2:"Ponteiro 2", LI:"Líbero", AT:"Atacante"};
+// "AT" (Atacante) é uma posição extra, disponível só quando o time não tem os
+// 6 jogadores completos (jogadores por time < 6) — ao contrário das posições
+// fixas do rodízio, ela pode ser repetida entre vários jogadores do time.
+const EXTRA_POSITIONS = ["AT"];
 
 const ACTIONS = [
   {key:"ataqueCerto",  title:"Ataque",   sub:"+1 ponto",    cls:"good", pt:1,  short:"Atq✓"},
@@ -739,8 +778,56 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.62.0";
+const APP_VERSION = "3.70.3";
 const CHANGELOG = [
+  { version:"3.70.3", date:"30/07/2026", changes:[
+    "Adicionada a regra: o ponto de \"Saque errado\" só pode ser marcado para o jogador que sacou. Se for marcado para outro jogador, a marcação é bloqueada e o app avisa (mensagem + voz) qual jogador fez o saque."
+  ]},
+  { version:"3.70.2", date:"30/07/2026", changes:[
+    "No PDF de \"Sets encerrados\", o quadro de totalização geral passou a aparecer acima da lista de sets, em vez de abaixo do último set."
+  ]},
+  { version:"3.70.1", date:"30/07/2026", changes:[
+    "O PDF de \"Sets encerrados\" passou a exibir os sets em 3 colunas por página (antes eram 2), com 9 sets por página em vez de 6."
+  ]},
+  { version:"3.70.0", date:"30/07/2026", changes:[
+    "No PDF, as colunas \"Acer\" e \"Erro\" da totalização geral foram renomeadas para \"Acertos\" e \"Erros\".",
+    "Criada a coluna \"Levantamentos\" (em cada tabela de set e na totalização geral): soma dos ataques certos do time, creditada ao jogador na posição de Levantador (LE).",
+    "O cálculo de acertos/erros/%acertos da totalização geral deixou de contar saques e levantamentos — passa a considerar apenas ataque certo, pingada, bloqueio e ace como acertos, e ataque errado, saque errado, passe errado e infração como erros."
+  ]},
+  { version:"3.69.1", date:"30/07/2026", changes:[
+    "O quadro de totalização geral do PDF passou a ser agrupado por jogador (em vez de por time), somando todas as ações de cada um (saque, ataque certo/errado, bloqueio, pingada, ace, saque errado, passe errado, infração) em todos os sets exportados."
+  ]},
+  { version:"3.69.0", date:"30/07/2026", changes:[
+    "Adicionado, no PDF de estatísticas (\"Sets encerrados\"), um quadro de totalização geral logo abaixo do último set, com o resumo de todos os sets exportados por time: sets jogados, vitórias, derrotas, acertos, erros e %acertos — a célula de %acertos é destacada em azul (acima de 50%), amarelo (igual a 50%) ou vermelho (abaixo de 50%)."
+  ]},
+  { version:"3.68.1", date:"30/07/2026", changes:[
+    "Corrigido o rodízio de saque para jogadores com a posição \"AT\" (Atacante): antes, como \"AT\" não é uma posição fixa, o app podia não encontrar quem deveria sacar na vez desse jogador. Agora o rodízio funciona normalmente com \"AT\", passando a vez de acordo com a ordem dos jogadores no elenco do time."
+  ]},
+  { version:"3.68.0", date:"30/07/2026", changes:[
+    "Criada a posição \"AT\" (Atacante): quando um time não tem os 6 jogadores completos (\"Jogadores por time\" abaixo de 6), ela aparece como opção extra na caixa de posição do elenco e pode ser repetida em vários jogadores do mesmo time — ao contrário das demais posições, que não podem se repetir entre os jogadores ativos no rodízio."
+  ]},
+  { version:"3.67.0", date:"30/07/2026", changes:[
+    "A caixa \"Jogadores por time\" saiu do campo \"Configurações da partida\" (era uma opção única para os dois times) e passou para o card de cada time, na tela Times, acima do elenco — agora cada time pode ter uma quantidade de jogadores diferente do outro.",
+    "Ao reduzir a quantidade de jogadores de um time, o app remove do elenco o jogador que ocupava a última posição ativa do rodízio (ex.: de 6 para 5, remove quem estava no Líbero) e o rodízio de saque passa a considerar só a nova quantidade. Ao aumentar, adiciona de volta um jogador em branco na posição que passou a ficar ativa."
+  ]},
+  { version:"3.66.1", date:"30/07/2026", changes:[
+    "Corrigido: a caixa \"Começa sacando\" só tinha sido movida para depois dos botões \"Desfazer\"/\"Refazer\"/\"Próximo set\" no modo retrato — no modo paisagem (tela mais larga), ela ainda aparecia logo abaixo do placar, por causa da ordem própria dos blocos nesse layout. Agora a posição é a mesma nos dois modos."
+  ]},
+  { version:"3.66.0", date:"30/07/2026", changes:[
+    "Movida a caixa \"Começa sacando\", na aba de marcação, para depois dos botões \"Desfazer\", \"Refazer\" e \"Próximo set\" (antes ficava logo abaixo do placar)."
+  ]},
+  { version:"3.65.0", date:"30/07/2026", changes:[
+    "Adicionada, na aba de marcação, logo abaixo do placar, uma caixa \"Começa sacando\" para escolher manualmente qual time saca primeiro em cada set — deixou de alternar sozinho a cada set. Se for trocada bem no início do set (placar 0-0), o 1º saque já registrado é refeito na hora para o time recém-marcado.",
+    "Quando o jogador marcado como \"inicia o saque\" de um time é trocado no elenco (tela Times) com a partida já em andamento: se o saque inicial daquele time neste set ainda for o último registrado, o app desfaz esse registro sozinho e registra de novo para o jogador recém-marcado."
+  ]},
+  { version:"3.64.0", date:"30/07/2026", changes:[
+    "Adicionada, no elenco de cada time (tela Times), uma caixa de seleção \"inicia o saque\" ao lado da posição dos 6 primeiros jogadores, para marcar qual jogador começa sacando naquele time — agora cada time pode ter uma posição de rodízio inicial diferente do outro. Vem marcado, por padrão, o jogador na posição de Levantador (LE).",
+    "Removida do campo \"Configurações da partida\" a caixa \"Posição que começa sacando\" (era uma opção única para os dois times) — a posição inicial do rodízio agora é definida por time, através da nova caixa \"inicia o saque\" no elenco."
+  ]},
+  { version:"3.63.0", date:"30/07/2026", changes:[
+    "Criado o campo \"Configurações da partida\" na tela Times, logo abaixo do botão \"+ adicionar time\", reunindo em um só lugar (válido para os dois times): a opção \"Líbero saca no lugar do Central\" (que saiu de baixo do nome de cada time), uma nova opção para escolher a posição que começa sacando em cada set, e uma nova opção para definir quantos jogadores por time (1 a 6) participam do rodízio de saque.",
+    "Removidos o botão \"Saq\" do card de cada jogador e o comando de voz correspondente (\"Saque [nome]\"/\"sac\") na tela de marcação: agora o app define sozinho, desde o 1º saque de cada set, quem está sacando — alternando o time que começa e usando a posição escolhida em \"Configurações da partida\"."
+  ]},
   { version:"3.62.0", date:"29/07/2026", changes:[
     "Na planilha exportada (.xls), adicionadas duas linhas em branco logo abaixo de cada linha de jogador com posição \"LI\", com \"0\" na coluna Nome."
   ]},
@@ -1154,33 +1241,34 @@ const CHANGELOG = [
    (ou cria um grupo novo), para o guia ficar sempre atualizado. */
 const HELP_DATA = [
   { id:"regras", icon:"📋", title:"Regras do jogo", items:[
-    { name:"Saque automático a partir do 2º saque", tag:"automático", tagCls:"good",
-      desc:"Só o 1º saque da partida (e o 1º saque de cada novo set) precisa ser marcado manualmente no botão \"Saq\", para definir quem começa sacando. Depois disso, assim que um ponto é marcado, o app já marca sozinho o saque do próximo sacador — contando a estatística de saque dele e falando o comando de voz \"Saque [nome]\", igual a uma marcação manual. Não é mais preciso tocar em \"Saq\" a cada jogada. Se esse saque automático for o do ponto que encerrou o set, ele é descontado das estatísticas — como esse saque nunca chegou a acontecer de verdade, ele não entra na contagem." },
+    { name:"Configurações da partida", tag:"tela Times", tagCls:"info",
+      desc:"Logo abaixo de \"+ adicionar time\", na tela Times, fica o campo \"Configurações da partida\", com a opção \"Líbero saca no lugar do Central\" (CE não saca), válida para os dois times." },
+    { name:"Jogadores por time (por time)", tag:"elenco", tagCls:"info",
+      desc:"No card de cada time, acima do elenco, uma caixa de seleção define quantos jogadores (1 a 6) esse time usa no rodízio de saque — cada time pode ter uma quantidade diferente do outro. Ao reduzir, o app remove do elenco o jogador que ocupava a última posição ativa do rodízio (ex.: de 6 para 5, remove quem estava no Líbero); ao aumentar, adiciona de volta um jogador em branco na posição que passou a ficar ativa. Se o time já estiver em quadra numa partida em andamento, o rodízio de saque passa a considerar só a nova quantidade de jogadores." },
+    { name:"Posição \"AT\" (Atacante)", tag:"elenco", tagCls:"info",
+      desc:"Quando um time não tem os 6 jogadores completos (\"Jogadores por time\" abaixo de 6), a caixa de posição do elenco ganha a opção extra \"AT\" (Atacante), que pode ser repetida em quantos jogadores do time forem necessários — diferente das demais posições, que não podem se repetir entre os jogadores ativos no rodízio. O rodízio de saque continua funcionando normalmente com jogadores em \"AT\": cada um saca na sua vez, na ordem em que aparece no elenco." },
+    { name:"Inicia o saque (por time)", tag:"elenco", tagCls:"info",
+      desc:"No elenco de cada time, ao lado da posição dos jogadores ativos no rodízio, há uma caixa de seleção \"inicia o saque\": marque o jogador que deve começar sacando naquele time. Cada time pode ter uma posição de rodízio inicial diferente do outro. Por padrão, vem marcado o jogador na posição de Levantador (LE). Se essa marcação for trocada com a partida já em andamento e o saque inicial daquele time ainda for o último registrado, o app desfaz esse registro sozinho e registra de novo para o jogador recém-marcado." },
+    { name:"Começa sacando (aba de marcação)", tag:"manual", tagCls:"info",
+      desc:"Logo abaixo do placar, na aba de marcação, uma caixa deixa escolher manualmente qual time começa sacando em cada set — não alterna mais sozinho a cada set. Se for trocada bem no início do set (placar 0-0), a atribuição do 1º saque é refeita na hora para o time recém-marcado." },
+    { name:"Saque totalmente automático", tag:"automático", tagCls:"good",
+      desc:"A partir de quem começa sacando (escolhido na caixa \"Começa sacando\") e da posição marcada como \"inicia o saque\" no elenco de cada time, o app já registra sozinho o 1º saque do set. Depois, a cada ponto marcado, o próximo sacador também é definido e contado sozinho. Não existe mais botão ou comando de voz para marcar o saque manualmente. Se o último saque automático do set for o do ponto que o encerrou, ele é descontado das estatísticas — como esse saque nunca chegou a acontecer de verdade, ele não entra na contagem." },
     { name:"Ace só vale para quem sacou", tag:"bloqueia", tagCls:"bad",
       desc:"Se você marcar \"Ace\" para um jogador diferente de quem está sacando no momento, o app bloqueia a marcação e avisa (na tela e por voz) quem foi o sacador correto." },
-    { name:"Não dá para marcar ponto sem confirmar o saque", tag:"bloqueia", tagCls:"bad",
-      desc:"Ataque, bloqueio, erro etc. só podem ser marcados depois que o saque da jogada foi confirmado (isso acontece automaticamente a partir do 2º saque; no 1º saque da partida/set, use o botão \"Saq\" ou o comando de voz \"Saque [nome]\"). Exceção: o botão \"+1 direto\" (ponto direto) não exige isso." },
-    { name:"Não dá para marcar dois saques seguidos", tag:"bloqueia", tagCls:"bad",
-      desc:"Como o saque já fica confirmado automaticamente depois de cada ponto, tocar em \"Saq\" de novo antes do próximo ponto é tratado como saque duplicado e é bloqueado." },
-    { name:"Saque tem que ser de um jogador do time que está sacando", tag:"bloqueia", tagCls:"bad",
-      desc:"Se o saque for marcado para um jogador do time que não está sacando, o app bloqueia e informa qual time deveria estar sacando." },
-    { name:"Sacador errado (rodízio)", tag:"bloqueia", tagCls:"bad",
-      desc:"Se o jogador marcado como sacador for diferente do esperado pelo rodízio automático, o app bloqueia a marcação e avisa (na tela e por voz) quem deveria estar sacando." },
-    { name:"Aviso de saque esquecido", tag:"só avisa", tagCls:"info",
-      desc:"Se um ponto for marcado sem que o saque daquela jogada tenha sido registrado (só pode acontecer no 1º saque da partida/set), o app mostra um aviso na tela e fala \"Atenção! Marque o saque\"." },
+    { name:"Saque errado só vale para quem sacou", tag:"bloqueia", tagCls:"bad",
+      desc:"Se você marcar \"Saque errado\" para um jogador diferente de quem está sacando no momento, o app bloqueia a marcação e avisa (na tela e por voz) quem foi o sacador correto." },
     { name:"Rally scoring", tag:"placar", tagCls:"info",
       desc:"Todo ponto marcado, de qualquer time, soma no placar imediatamente. Quem ganha o ponto passa a ser o time que saca na jogada seguinte." },
     { name:"Senha para encerrar a partida", tag:"segurança", tagCls:"info",
       desc:"Encerrar a partida (voltar para a tela de Nova Partida) exige confirmar uma senha antes." },
   ]},
   { id:"acao", icon:"🎤", title:"Comandos de voz — ações de jogo", items:[
-    { name:"Saque", tag:"estatística", tagCls:"good", say:"Saque [nome]", variants:"Variações aceitas: \"sac\"" },
     { name:"Ataque", tag:"+1 ponto", tagCls:"good", say:"Ataque [nome]", variants:"Também aceita \"ataque certo [nome]\"" },
     { name:"Pingada / largada", tag:"+1 ponto", tagCls:"good", say:"Pingada [nome]", variants:"Também aceita: \"larga\", \"largada\", \"pingar\", \"pingo\"" },
     { name:"Bloqueio", tag:"+1 ponto", tagCls:"good", say:"Bloqueio [nome]", variants:"Também aceita: \"bloco\", \"block\"" },
     { name:"Ace", tag:"+1 ponto", tagCls:"good", say:"Ace [nome]", variants:"Só é aceito para quem sacou na jogada. Muitas variações de transcrição aceitas (eice, eis, aice, ecis, entre outras)." },
     { name:"Ataque errado", tag:"ponto adversário", tagCls:"bad", say:"Ataque errado [nome]", variants:"Também aceita: \"erro de ataque\", \"erro ataque\", \"ataque erro\"" },
-    { name:"Saque errado", tag:"ponto adversário", tagCls:"bad", say:"Saque errado [nome]", variants:"Também aceita: \"erro de saque\", \"erro saque\", \"saque erro\"" },
+    { name:"Saque errado", tag:"ponto adversário", tagCls:"bad", say:"Saque errado [nome]", variants:"Só é aceito para quem sacou na jogada. Também aceita: \"erro de saque\", \"erro saque\", \"saque erro\"" },
     { name:"Passe errado", tag:"ponto adversário", tagCls:"bad", say:"Passe errado [nome]", variants:"Também aceita: \"erro de passe\", \"erro passe\", \"passe erro\"" },
     { name:"Infração", tag:"ponto adversário", tagCls:"bad", say:"Infração [nome]", variants:"Também aceita: \"falta\"" },
     { name:"Ponto direto", tag:"+1 ponto", tagCls:"good", say:"Ponto direto [nome do time]", variants:"Precisa falar o nome exato do time, não exige saque confirmado antes." },
@@ -1218,11 +1306,13 @@ function newPlayer(name, pos){
   return {id:uid(), name:name||"", pos:pos||"P1", stats: emptyStats()};
 }
 function newTeam(name){
+  const players = [newPlayer("","LE"), newPlayer("","P1"), newPlayer("","CE"), newPlayer("","OP"), newPlayer("","P2"), newPlayer("","LI")];
   return {
     id:uid(),
     name:name||"",
-    liberoServesForCE:true, // se ativado, o LI saca no lugar do CE (LI saca 2x no rodízio) — vem marcado por padrão
-    players:[newPlayer("","LE"), newPlayer("","P1"), newPlayer("","CE"), newPlayer("","OP"), newPlayer("","P2"), newPlayer("","LI")]
+    startServerPlayerId: players[0].id, // por padrão, quem inicia o saque é o jogador na posição de Levantador (LE)
+    playerCount: 6, // Jogadores por time (1 a 6) — cada time pode ter uma quantidade diferente
+    players
   };
 }
 function teamBy(id){ return state.teams.find(t=>t.id===id); }
@@ -1241,36 +1331,224 @@ function teamDisplayName(team){
 }
 
 /* ---------------- rodízio automático de saque -----------------
-   Sequência fixa de posições: LE, P1, CE, OP, P2, LI (POSITIONS).
-   Cada time tem seu próprio ponteiro de rodízio, independente do
-   adversário: toda vez que o time reconquista o saque (side-out a
-   favor dele), avança uma posição — ex: depois que o Levantador (LE)
-   sacou, a próxima vez que o MESMO time sacar será com o P1. */
-function positionForRotationSlot(teamObj, idx){
-  let pos = POSITIONS[idx];
-  if(pos==='CE' && teamObj && teamObj.liberoServesForCE){
+   Sequência de posições usada no rodízio: as N primeiras de POSITIONS
+   (LE, P1, CE, OP, P2, LI), onde N vem de "Jogadores por time"
+   (elenco de cada time, 1 a 6) — cada time pode ter uma quantidade
+   diferente do outro. Cada time tem seu próprio ponteiro de rodízio,
+   independente do adversário: toda vez que o time reconquista o saque
+   (side-out a favor dele), avança uma posição — ex: depois que o
+   Levantador (LE) sacou, a próxima vez que o MESMO time sacar será
+   com o P1.
+
+   Cada time pode ter uma posição de rodízio inicial diferente: no card de
+   cada jogador (elenco), a caixa "inicia o saque" marca qual jogador
+   daquele time começa sacando (guardado em team.startServerPlayerId).
+   Por padrão, vem marcado o jogador na posição de Levantador (LE). */
+function activePositions(teamObj){
+  const n = Math.min(Math.max((teamObj && teamObj.playerCount) || 6, 1), 6);
+  return POSITIONS.slice(0, n);
+}
+function positionForRotationSlot(idx, teamObj){
+  const positions = activePositions(teamObj);
+  let pos = positions[idx % positions.length];
+  if(pos==='CE' && state.liberoServesForCE && positions.includes('LI')){
     pos = 'LI'; // CE não saca — o Líbero saca no lugar dele (LI saca 2x no rodízio)
   }
   return pos;
 }
+/* Encontra o jogador que deve sacar num determinado ponto do rodízio.
+   Primeiro tenta pela posição fixa esperada (LE, P1, CE...); se ninguém do
+   time estiver com essa posição no momento — por exemplo, porque ela foi
+   trocada para "AT" (Atacante), que pode ser repetida — a rotação continua
+   normalmente pelo jogador que ocupa esse mesmo lugar no elenco do time. */
+function playerForRotationSlot(idx, teamObj){
+  if(!teamObj) return null;
+  const pos = positionForRotationSlot(idx, teamObj);
+  let player = teamObj.players.find(p=>p.pos===pos);
+  if(!player){
+    const positions = activePositions(teamObj);
+    player = teamObj.players[idx % positions.length] || null;
+  }
+  return player;
+}
+/* Índice do rodízio correspondente a um jogador: pela posição fixa dele
+   (LE, P1, CE...), quando ele tiver uma; se não tiver (ex.: "AT"), usa o
+   lugar dele no elenco do time — assim a rotação continua funcionando
+   normalmente mesmo com posições repetidas ou fora do padrão. */
+function rotationIndexForPlayer(teamObj, player){
+  if(!teamObj || !player) return -1;
+  const positions = activePositions(teamObj);
+  let idx = positions.indexOf(player.pos);
+  if(idx < 0){
+    idx = teamObj.players.indexOf(player);
+    if(idx >= positions.length) idx = -1; // fora do alcance do rodízio ativo deste time
+  }
+  return idx;
+}
+function teamStartServeIndex(teamObj){
+  let player = null;
+  if(teamObj && teamObj.startServerPlayerId){
+    player = teamObj.players.find(p=>p.id===teamObj.startServerPlayerId);
+  }
+  if(!player && teamObj){
+    player = teamObj.players.find(p=>p.pos==='LE') || teamObj.players[0] || null;
+  }
+  const idx = rotationIndexForPlayer(teamObj, player);
+  return idx>=0 ? idx : 0;
+}
 function assignServerForRotation(team){
   const startedKey = team==='A' ? 'rotationStartedA' : 'rotationStartedB';
   const idxKey = team==='A' ? 'rotationIndexA' : 'rotationIndexB';
-  if(state[startedKey]){
-    state[idxKey] = (state[idxKey] + 1) % POSITIONS.length;
-  } else {
-    state[startedKey] = true; // primeira vez sacando neste set — começa no Levantador (LE)
-  }
   const teamObj = slotTeam(team);
-  const pos = positionForRotationSlot(teamObj, state[idxKey]);
-  const player = teamObj ? teamObj.players.find(p=>p.pos===pos) : null;
+  const positions = activePositions(teamObj);
+  if(state[startedKey]){
+    state[idxKey] = (state[idxKey] + 1) % positions.length;
+  } else {
+    state[startedKey] = true; // primeira vez sacando neste set — começa na posição configurada do time
+  }
+  const player = playerForRotationSlot(state[idxKey], teamObj);
   if(player) state.servingPlayerId = player.id;
 }
 function resetRotation(){
-  state.rotationIndexA = 0;
-  state.rotationIndexB = 0;
+  const teamA = slotTeam('A'), teamB = slotTeam('B');
+  state.rotationIndexA = teamStartServeIndex(teamA);
+  state.rotationIndexB = teamStartServeIndex(teamB);
   state.rotationStartedA = false;
   state.rotationStartedB = false;
+}
+
+/* Quem saca primeiro em cada set: como não existe mais o botão manual
+   "Saq", o time que começa sacando é escolhido manualmente pelo usuário
+   (caixa "Começa sacando" na aba de marcação, guardada em
+   state.firstServeTeam) — não alterna mais sozinho a cada set. A posição
+   em que cada time começa a sacar já vem definida por resetRotation(), a
+   partir do jogador marcado como "inicia o saque" no elenco de cada time. */
+function autoAssignFirstServe(){
+  const startingTeam = state.firstServeTeam === 'B' ? 'B' : 'A';
+  const startedKey = startingTeam==='A' ? 'rotationStartedA' : 'rotationStartedB';
+  const idxKey = startingTeam==='A' ? 'rotationIndexA' : 'rotationIndexB';
+  state[startedKey] = true;
+
+  const teamObj = slotTeam(startingTeam);
+  const player = playerForRotationSlot(state[idxKey], teamObj);
+
+  state.serve = startingTeam;
+  state.errorMessage = null;
+  if(player){
+    state.servingPlayerId = player.id;
+    player.stats.saqueCerto += 1;
+    logEvent(startingTeam, player, STAT_ONLY.title, startingTeam, STAT_ONLY.key);
+    lastAutoServe = { player, entry: state.history[state.history.length-1] };
+  } else {
+    state.servingPlayerId = null;
+    lastAutoServe = null;
+  }
+  state.serveConfirmed = true;
+}
+
+/* Quando o jogador marcado como "inicia o saque" de um time é trocado (no
+   elenco, tela Times), e esse time já está em quadra numa partida em
+   andamento: se o saque que valeu para o início do rodízio deste time
+   neste set ainda for o último saque registrado (ninguém sacou de novo
+   depois dele), desfaz esse registro e registra de novo para o jogador
+   recém-marcado. Se o time ainda não tiver sacado neste set, só atualiza
+   o ponteiro do rodízio (nada para desfazer ainda). */
+function reassignTeamStartServer(teamId, oldPlayerId, newPlayer){
+  if(!state.started) return; // partida ainda não começou — nada registrado ainda
+  const team = teamBy(teamId);
+  if(!team) return;
+
+  let slot = null;
+  if(teamId === state.activeAId) slot = 'A';
+  else if(teamId === state.activeBId) slot = 'B';
+  if(!slot) return; // time não está em quadra na partida atual
+
+  const startedKey = slot==='A' ? 'rotationStartedA' : 'rotationStartedB';
+  const idxKey = slot==='A' ? 'rotationIndexA' : 'rotationIndexB';
+
+  if(!state[startedKey]){
+    // este time ainda não sacou neste set — só atualiza o ponteiro do rodízio
+    const newIdx = rotationIndexForPlayer(team, newPlayer);
+    state[idxKey] = newIdx>=0 ? newIdx : 0;
+    markDirty();
+    renderAll();
+    return;
+  }
+
+  const oldPlayer = findPlayerAnywhereById(oldPlayerId);
+  const oldIdx = rotationIndexForPlayer(team, oldPlayer);
+  const isStillAtStartingServe = oldIdx>=0 && state[idxKey]===oldIdx;
+  const lastServeWasThisPlayer = lastAutoServe && lastAutoServe.player && lastAutoServe.player.id===oldPlayerId;
+
+  if(isStillAtStartingServe && lastServeWasThisPlayer){
+    // desfaz o saque automático registrado para o antigo sacador...
+    removePendingAutoServe();
+    // ...e registra o mesmo saque para o jogador recém-marcado
+    const newIdx = rotationIndexForPlayer(team, newPlayer);
+    state[idxKey] = newIdx>=0 ? newIdx : 0;
+    if(state.servingPlayerId === oldPlayerId) state.servingPlayerId = newPlayer.id;
+    newPlayer.stats.saqueCerto += 1;
+    logEvent(slot, newPlayer, STAT_ONLY.title, slot, STAT_ONLY.key);
+    lastAutoServe = { player:newPlayer, entry: state.history[state.history.length-1] };
+  }
+  markDirty();
+  renderAll();
+}
+
+/* "Jogadores por time" (1 a 6, por time): ao reduzir, remove do elenco o
+   jogador que ocupava a última posição ativa do rodízio (ex.: de 6 para 5,
+   remove quem estava no Líbero); ao aumentar, adiciona de volta um
+   jogador em branco na posição que passou a ficar ativa. */
+function shrinkTeamRoster(team, oldCount, newCount){
+  for(let i = oldCount - 1; i >= newCount; i--){
+    if(team.players.length <= 1) break; // nunca remove o último jogador do time inteiro
+    const pos = POSITIONS[i];
+    const idx = team.players.findIndex(p=>p.pos===pos);
+    if(idx === -1) continue;
+    const removedId = team.players[idx].id;
+    team.players.splice(idx, 1);
+    if(team.startServerPlayerId === removedId){
+      // o jogador removido era quem iniciava o saque — cai para o novo
+      // Levantador do time (ou para o primeiro jogador, se não houver)
+      const le = team.players.find(p=>p.pos==='LE');
+      team.startServerPlayerId = le ? le.id : (team.players[0] ? team.players[0].id : null);
+    }
+  }
+}
+function growTeamRoster(team, oldCount, newCount){
+  for(let i = oldCount; i < newCount; i++){
+    const pos = POSITIONS[i];
+    if(!team.players.some(p=>p.pos===pos)){
+      team.players.push(newPlayer("", pos));
+    }
+  }
+}
+
+/* Depois de mudar a quantidade de jogadores de um time: se ele estiver em
+   quadra numa partida em andamento, garante que o ponteiro do rodízio
+   continue dentro da nova quantidade de posições ativas, e reatribui o
+   sacador esperado caso o jogador marcado como sacando tenha sido removido. */
+function fixRotationAfterTeamSizeChange(teamId){
+  if(!state.started) return;
+  let slot = null;
+  if(teamId === state.activeAId) slot = 'A';
+  else if(teamId === state.activeBId) slot = 'B';
+  if(!slot) return;
+
+  const team = teamBy(teamId);
+  if(!team) return;
+  const idxKey = slot==='A' ? 'rotationIndexA' : 'rotationIndexB';
+  const positions = activePositions(team);
+  state[idxKey] = state[idxKey] % positions.length;
+
+  if(state.servingPlayerId && !team.players.some(p=>p.id===state.servingPlayerId)){
+    // o jogador que estava marcado como sacando foi removido — reatribui
+    // para quem ocupa a posição atual do rodízio deste time
+    const player = playerForRotationSlot(state[idxKey], team);
+    if(player) state.servingPlayerId = player.id;
+  }
+  markDirty();
+  renderAll();
 }
 
 function defaultState(){
@@ -1280,7 +1558,9 @@ function defaultState(){
     teams:[t1, t2],
     activeAId: t1.id,
     activeBId: t2.id,
-    serve: null, // indefinido até o primeiro saque ser marcado na quadra
+    liberoServesForCE:true, // Configurações da partida — Líbero saca no lugar do Central (vale para os dois times)
+    firstServeTeam:"A",     // Aba de marcação — qual time começa sacando (escolha manual, não alterna sozinho)
+    serve: null, // indefinido até o início da partida/set definir quem saca primeiro
     servingPlayerId: null, // jogador marcado como sacando (indicação visual)
     serveConfirmed: false, // true depois que o saque desta jogada foi marcado (botão Saq)
     errorMessage: null,    // erro de marcação (saque esquecido/errado) — some só quando corrigido
@@ -1387,8 +1667,29 @@ function migrateState(loaded){
   delete loaded.rotationIndex;
   delete loaded.rotationServedA;
   delete loaded.rotationServedB;
+  // Líbero saca no lugar do Central, posição inicial de saque e jogadores por
+  // time agora são configurações únicas da partida (Configurações da partida),
+  // em vez de uma opção por time.
+  if(loaded.liberoServesForCE === undefined){
+    const fromTeam = Array.isArray(loaded.teams) ? loaded.teams.find(t=>t.liberoServesForCE !== undefined) : null;
+    loaded.liberoServesForCE = fromTeam ? !!fromTeam.liberoServesForCE : true;
+  }
+  delete loaded.startPosition; // "Posição que começa sacando" deixou de ser uma configuração global
+  const legacyTeamSize = loaded.teamSize; // "Jogadores por time" deixou de ser uma configuração global
+  delete loaded.teamSize;
+  if(loaded.firstServeTeam === undefined) loaded.firstServeTeam = "A"; // escolha manual de quem começa sacando
   if(Array.isArray(loaded.teams)){
-    loaded.teams.forEach(t=>{ if(t.liberoServesForCE === undefined) t.liberoServesForCE = true; });
+    loaded.teams.forEach(t=>{
+      delete t.liberoServesForCE;
+      if(t.playerCount === undefined) t.playerCount = Math.min(Math.max(legacyTeamSize || 6, 1), 6);
+      // cada time agora escolhe, no próprio elenco, qual jogador inicia o saque
+      // (por padrão, o jogador na posição de Levantador)
+      const hasValidStarter = t.startServerPlayerId && Array.isArray(t.players) && t.players.some(p=>p.id===t.startServerPlayerId);
+      if(!hasValidStarter){
+        const le = Array.isArray(t.players) ? t.players.find(p=>p.pos==='LE') : null;
+        t.startServerPlayerId = le ? le.id : (t.players && t.players[0] ? t.players[0].id : null);
+      }
+    });
   }
 }
 
@@ -1397,8 +1698,8 @@ function reorderFirstSixByPosition(players){
   const first6 = players.slice(0,6);
   const rest = players.slice(6);
   first6.sort((a,b)=>{
-    const ia = a.pos ? POSITIONS.indexOf(a.pos) : 999;
-    const ib = b.pos ? POSITIONS.indexOf(b.pos) : 999;
+    const ia = a.pos && POSITIONS.includes(a.pos) ? POSITIONS.indexOf(a.pos) : 999;
+    const ib = b.pos && POSITIONS.includes(b.pos) ? POSITIONS.indexOf(b.pos) : 999;
     return ia - ib;
   });
   return first6.concat(rest);
@@ -1417,19 +1718,27 @@ function renderRosterFor(teamId){
   // repeti-la entre si: ao escolher uma posição já usada por outro dos 6
   // primeiros, os dois trocam de posição automaticamente (ver listener abaixo).
   // A partir do 7º jogador, qualquer posição pode ser escolhida livremente,
-  // podendo repetir.
+  // podendo repetir. Exceção: quando o time não tem os 6 jogadores completos
+  // (jogadores por time < 6), a posição extra "AT" (Atacante) também fica
+  // disponível e pode ser repetida entre vários jogadores do time.
+  const allowExtraPositions = (team.playerCount || 6) < 6;
 
   players.forEach((p, idx)=>{
     const row = document.createElement('div');
     row.className = 'player-row';
-    const posOptions = POSITIONS;
+    const posOptions = allowExtraPositions ? POSITIONS.concat(EXTRA_POSITIONS) : POSITIONS;
     const emptyOption = idx < 6 ? `<option value="" ${p.pos?'':'selected'}>—</option>` : '';
+    const startServeRadio = idx < 6 ? `
+      <label class="start-serve-radio" title="Inicia o saque">
+        <input type="radio" name="startServe-${teamId}" class="start-serve-input" data-idx="${idx}" data-team-id="${teamId}" ${team.startServerPlayerId===p.id?'checked':''}>
+      </label>` : '';
     row.innerHTML = `
       <input type="text" maxlength="16" placeholder="Nome do jogador" value="${escapeHtml(p.name)}" data-idx="${idx}" data-team-id="${teamId}" class="pname-input">
       <select data-idx="${idx}" data-team-id="${teamId}" class="ppos-select">
         ${emptyOption}
         ${posOptions.map(pos=>`<option value="${pos}" ${pos===p.pos?'selected':''}>${pos}</option>`).join('')}
       </select>
+      ${startServeRadio}
       <button class="rm-btn" data-idx="${idx}" data-team-id="${teamId}">×</button>
     `;
     wrap.appendChild(row);
@@ -1449,9 +1758,10 @@ function renderRosterFor(teamId){
       const player = team.players[i];
       const oldPos = player.pos;
       const newPos = e.target.value;
-      if(i < 6 && newPos){
+      if(i < 6 && newPos && !EXTRA_POSITIONS.includes(newPos)){
         // se outro dos 6 primeiros já está nessa posição, os dois trocam:
-        // ele passa a usar a posição que este jogador tinha antes
+        // ele passa a usar a posição que este jogador tinha antes.
+        // "AT" fica de fora dessa troca — pode ser repetida livremente.
         const conflict = team.players.slice(0,6).find((p, idx2) => idx2!==i && p.pos===newPos);
         if(conflict) conflict.pos = oldPos;
       }
@@ -1459,12 +1769,33 @@ function renderRosterFor(teamId){
       renderRosterFor(tId); // reordena e atualiza a lista após a troca
     });
   });
+  $$('.start-serve-input', wrap).forEach(radio=>{
+    radio.addEventListener('change', e=>{
+      const i = +e.target.dataset.idx;
+      const tId = e.target.dataset.teamId;
+      const team = teamBy(tId);
+      const oldPlayerId = team.startServerPlayerId;
+      const newPlayer = team.players[i];
+      team.startServerPlayerId = newPlayer.id;
+      if(oldPlayerId !== newPlayer.id){
+        reassignTeamStartServer(tId, oldPlayerId, newPlayer);
+      }
+    });
+  });
   $$('.rm-btn', wrap).forEach(btn=>{
     btn.addEventListener('click', e=>{
       const i = +e.target.dataset.idx;
-      const arr = teamBy(e.target.dataset.teamId).players;
+      const team = teamBy(e.target.dataset.teamId);
+      const arr = team.players;
       if(arr.length<=1) return;
+      const removedId = arr[i].id;
       arr.splice(i,1);
+      if(team.startServerPlayerId === removedId){
+        // o jogador removido era quem iniciava o saque — cai para o novo
+        // Levantador do time (ou para o primeiro jogador, se não houver)
+        const le = arr.find(p=>p.pos==='LE');
+        team.startServerPlayerId = le ? le.id : (arr[0] ? arr[0].id : null);
+      }
       renderRosterFor(e.target.dataset.teamId);
     });
   });
@@ -1476,16 +1807,16 @@ function renderTeamsSetup(){
   state.teams.forEach((team, idx)=>{
     const card = document.createElement('div');
     card.className = 'card team-card';
+    const sizeOptions = [1,2,3,4,5,6].map(n=>`<option value="${n}" ${n===(team.playerCount||6)?'selected':''}>${n}</option>`).join('');
     card.innerHTML = `
       <div class="team-card-head">
         <h2 style="color:${TEAM_PALETTE[idx % TEAM_PALETTE.length]}">Time ${idx+1}</h2>
         ${state.teams.length>2 ? `<button class="rm-team-btn" data-team-id="${team.id}">Excluir time</button>` : ''}
       </div>
-      <label class="libero-ce-toggle">
-        <input type="checkbox" class="libero-ce-checkbox" data-team-id="${team.id}" ${team.liberoServesForCE?'checked':''}>
-        Líbero saca no lugar do Central (CE não saca)
-      </label>
+      <label class="field-label">Jogadores por time (quadra)</label>
+      <select class="team-size-select" data-team-id="${team.id}">${sizeOptions}</select>
       <label class="field-label">Elenco</label>
+      <p class="roster-hint">🏐 marque, na coluna ao lado da posição, quem inicia o saque deste time</p>
       <div class="roster-wrap" data-team-id="${team.id}"></div>
       <button class="add-player-btn add-player-btn-team" data-team-id="${team.id}">+ adicionar jogador</button>
     `;
@@ -1493,9 +1824,17 @@ function renderTeamsSetup(){
     renderRosterFor(team.id);
   });
 
-  $$('.libero-ce-checkbox', wrap).forEach(chk=>{
-    chk.addEventListener('change', e=>{
-      teamBy(e.target.dataset.teamId).liberoServesForCE = e.target.checked;
+  $$('.team-size-select', wrap).forEach(sel=>{
+    sel.addEventListener('change', e=>{
+      const tId = e.target.dataset.teamId;
+      const team = teamBy(tId);
+      const oldCount = team.playerCount || 6;
+      const newCount = +e.target.value;
+      if(newCount < oldCount) shrinkTeamRoster(team, oldCount, newCount);
+      else if(newCount > oldCount) growTeamRoster(team, oldCount, newCount);
+      team.playerCount = newCount;
+      fixRotationAfterTeamSizeChange(tId);
+      renderRosterFor(tId);
     });
   });
 }
@@ -1513,12 +1852,25 @@ function renderMatchupSelectors(){
 
 let cameFromMatch = false;
 
+/* Configurações da partida: ficam num campo único, abaixo do botão
+   "+ adicionar time", valendo para os dois times. Inclui apenas a opção
+   do líbero sacar no lugar do central. A posição que começa sacando e a
+   quantidade de jogadores por time não são mais globais: cada time
+   escolhe as suas próprias, direto no card dele, na lista de elenco (ver
+   "inicia o saque" e "jogadores por time" em renderTeamsSetup/renderRosterFor). */
+function renderMatchConfig(){
+  const liberoChk = $('#liberoCeCheckbox');
+  liberoChk.checked = !!state.liberoServesForCE;
+  liberoChk.onchange = e=>{ state.liberoServesForCE = e.target.checked; };
+}
+
 function showSetup(){
   $('#setupScreen').classList.remove('hidden');
   $('#matchScreen').classList.add('hidden');
   $('#bottomBarWrap').classList.add('hidden');
   renderTeamsSetup();
   renderMatchupSelectors();
+  renderMatchConfig();
 
   $('#btnBackToMatch').classList.toggle('hidden', !cameFromMatch);
   $('#btnStart').classList.toggle('hidden', cameFromMatch);
@@ -1568,10 +1920,6 @@ $('#btnStart').addEventListener('click', ()=>{
   errEl.classList.add('hidden');
 
   state.started = true;
-  state.serve = null;
-  resetRotation();
-  state.servingPlayerId = null;
-  state.errorMessage = null;
   state.setNum = 1;
   state.score = {A:0,B:0};
   state.setsHistory = [];
@@ -1580,7 +1928,8 @@ $('#btnStart').addEventListener('click', ()=>{
   state.history = [];
   undoStack = [];
   redoStack = [];
-  lastAutoServe = null;
+  resetRotation();
+  autoAssignFirstServe(); // define sozinho quem saca primeiro, sem precisar de toque manual
   activeTab = 'court';
   markDirty();
   showMatch();
@@ -1616,8 +1965,7 @@ function expectedServerForTeam(team){
     if(marked) return marked;
   }
   const idx = team==='A' ? state.rotationIndexA : state.rotationIndexB;
-  const pos = positionForRotationSlot(teamObj, idx);
-  return teamObj.players.find(p=>p.pos===pos) || null;
+  return playerForRotationSlot(idx, teamObj);
 }
 
 function renderScoreboard(){
@@ -1655,6 +2003,49 @@ function renderScoreboard(){
       alertEl.className = 'action-alert point';
     }
   }
+  renderFirstServeConfig();
+}
+
+/* Caixa "Começa sacando" na aba de marcação: escolha manual (não alterna
+   mais sozinho a cada set) de qual time saca primeiro. Se for trocada bem
+   no início do set (placar 0-0), a atribuição do 1º saque é refeita na
+   hora, desfazendo o saque automático anterior e registrando para o time
+   recém-marcado. */
+function renderFirstServeConfig(){
+  const wrap = $('#firstServeConfig');
+  if(!wrap) return;
+  const a = slotTeam('A'), b = slotTeam('B');
+  const current = state.firstServeTeam === 'B' ? 'B' : 'A';
+  wrap.innerHTML = `
+    <span class="first-serve-label">Começa sacando</span>
+    <label class="first-serve-option ${current==='A'?'checked':''}">
+      <input type="radio" name="firstServeTeam" value="A" ${current==='A'?'checked':''}>
+      ${teamDisplayName(a)}
+    </label>
+    <label class="first-serve-option ${current==='B'?'checked':''}">
+      <input type="radio" name="firstServeTeam" value="B" ${current==='B'?'checked':''}>
+      ${teamDisplayName(b)}
+    </label>
+  `;
+  $$('input[name="firstServeTeam"]', wrap).forEach(inp=>{
+    inp.addEventListener('change', e=> setFirstServeTeam(e.target.value));
+  });
+}
+
+function setFirstServeTeam(newTeam){
+  newTeam = newTeam==='B' ? 'B' : 'A';
+  const changed = state.firstServeTeam !== newTeam;
+  state.firstServeTeam = newTeam;
+  if(changed && state.started && !state.matchOver && state.score.A===0 && state.score.B===0){
+    // ainda no início do set (nenhum ponto marcado) — refaz a atribuição
+    // do 1º saque, desfazendo o saque automático anterior (se houver) e
+    // registrando para o time recém-marcado
+    removePendingAutoServe();
+    resetRotation();
+    autoAssignFirstServe();
+  }
+  markDirty();
+  renderAll();
 }
 
 /* ---------------- trocar time direto na tela de marcação (3+ times) ----------------
@@ -1735,7 +2126,6 @@ function playerCard(p, team){
   const actionBtns = ACTIONS.map(a=>
     `<button class="mini-action ${a.cls}" data-team="${team}" data-player="${p.id}" data-action="${a.key}">${a.short}</button>`
   ).join('');
-  const statBtn = `<button class="mini-action yellow" data-team="${team}" data-player="${p.id}" data-action="${STAT_ONLY.key}">${STAT_ONLY.short}</button>`;
   const servingLabel = state.serveConfirmed ? '🏐 Sacou' : '🏐 Sacar';
   card.innerHTML = `
     <div class="player-info">
@@ -1746,7 +2136,6 @@ function playerCard(p, team){
       <div class="player-pts">🏐${totalPointsFor(p)}pt</div>
     </div>
     <div class="mini-action-grid">
-      ${statBtn}
       ${actionBtns}
     </div>
   `;
@@ -2081,18 +2470,111 @@ function buildArchiveStatsTable(players){
 }
 
 function buildPdfStatsTable(players){
-  let tot = {ataqueCerto:0,ataqueErrado:0,bloqueio:0,pingada:0,ace:0,saqueCerto:0,saqueErrado:0,passeErrado:0,infracao:0,pts:0};
+  const levTotal = players.reduce((sum,p)=> sum + ((p.stats && p.stats.ataqueCerto)||0), 0);
+  let tot = {ataqueCerto:0,ataqueErrado:0,bloqueio:0,pingada:0,ace:0,saqueCerto:0,saqueErrado:0,passeErrado:0,infracao:0,lev:0,pts:0};
   const rows = players.map(p=>{
     const s = p.stats;
     const pts = ((s.ataqueCerto||0)+(s.pingada||0)+(s.bloqueio||0)+(s.ace||0)) - ((s.ataqueErrado||0)+(s.saqueErrado||0)+(s.passeErrado||0)+(s.infracao||0));
-    Object.keys(tot).forEach(k=>{ if(k!=='pts') tot[k]+=s[k]||0; });
+    const lev = p.pos === 'LE' ? levTotal : 0;
+    Object.keys(tot).forEach(k=>{ if(k!=='pts' && k!=='lev') tot[k]+=s[k]||0; });
+    tot.lev += lev;
     tot.pts += pts;
-    return `<tr><td class="nm">${escapeHtml(p.name)}</td><td>${s.saqueCerto||0}</td><td>${s.ataqueCerto||0}</td><td>${s.ataqueErrado||0}</td><td>${s.bloqueio||0}</td><td>${s.pingada||0}</td><td>${s.ace||0}</td><td>${s.saqueErrado||0}</td><td>${s.passeErrado||0}</td><td>${s.infracao||0}</td><td>${pts}</td></tr>`;
+    return `<tr><td class="nm">${escapeHtml(p.name)}</td><td>${s.saqueCerto||0}</td><td>${s.ataqueCerto||0}</td><td>${s.ataqueErrado||0}</td><td>${s.bloqueio||0}</td><td>${s.pingada||0}</td><td>${s.ace||0}</td><td>${s.saqueErrado||0}</td><td>${s.passeErrado||0}</td><td>${s.infracao||0}</td><td>${lev}</td><td>${pts}</td></tr>`;
   }).join('');
   return `
     <table class="pdf-table">
-      <thead><tr><th class="nm">Jogador</th><th>Saq</th><th>Atq✓</th><th>Atq✗</th><th>Blq</th><th>Png</th><th>Ace</th><th>Sq✗</th><th>Ps✗</th><th>Inf</th><th>Pts</th></tr></thead>
-      <tbody>${rows}<tr class="tot"><td class="nm">Total</td><td>${tot.saqueCerto}</td><td>${tot.ataqueCerto}</td><td>${tot.ataqueErrado}</td><td>${tot.bloqueio}</td><td>${tot.pingada}</td><td>${tot.ace}</td><td>${tot.saqueErrado}</td><td>${tot.passeErrado}</td><td>${tot.infracao}</td><td>${tot.pts}</td></tr></tbody>
+      <thead><tr><th class="nm">Jogador</th><th>Saq</th><th>Atq✓</th><th>Atq✗</th><th>Blq</th><th>Png</th><th>Ace</th><th>Sq✗</th><th>Ps✗</th><th>Inf</th><th>Lev</th><th>Pts</th></tr></thead>
+      <tbody>${rows}<tr class="tot"><td class="nm">Total</td><td>${tot.saqueCerto}</td><td>${tot.ataqueCerto}</td><td>${tot.ataqueErrado}</td><td>${tot.bloqueio}</td><td>${tot.pingada}</td><td>${tot.ace}</td><td>${tot.saqueErrado}</td><td>${tot.passeErrado}</td><td>${tot.infracao}</td><td>${tot.lev}</td><td>${tot.pts}</td></tr></tbody>
+    </table>
+  `;
+}
+
+/* Monta o quadro de totalização geral (todos os sets exportados), agrupado
+   por JOGADOR: sets jogados, vitórias, derrotas, todas as ações (saque,
+   ataque certo/errado, bloqueio, pingada, ace, saque errado, passe errado,
+   infração), levantamentos (soma dos ataques certos do time, creditada ao
+   jogador na posição LE em cada set), acertos, erros e %acertos — com
+   destaque de cor (azul >50%, amarelo =50%, vermelho <50%). Acertos e erros
+   da totalização NÃO incluem saques nem levantamentos. */
+function buildPdfTotalsTable(sets){
+  const players = new Map(); // nome do jogador -> acumulado
+
+  function ensurePlayer(name){
+    if(!players.has(name)){
+      players.set(name, {
+        sets:0, wins:0, losses:0,
+        saqueCerto:0, ataqueCerto:0, ataqueErrado:0, bloqueio:0, pingada:0, ace:0,
+        saqueErrado:0, passeErrado:0, infracao:0, levantamentos:0,
+        acertos:0, erros:0
+      });
+    }
+    return players.get(name);
+  }
+
+  function accumulate(playerList, levTotalForTeam, won, lost){
+    (playerList||[]).forEach(p=>{
+      const t = ensurePlayer(p.name);
+      const s = p.stats || {};
+      t.sets++;
+      if(won) t.wins++;
+      if(lost) t.losses++;
+      t.saqueCerto += s.saqueCerto||0;
+      t.ataqueCerto += s.ataqueCerto||0;
+      t.ataqueErrado += s.ataqueErrado||0;
+      t.bloqueio += s.bloqueio||0;
+      t.pingada += s.pingada||0;
+      t.ace += s.ace||0;
+      t.saqueErrado += s.saqueErrado||0;
+      t.passeErrado += s.passeErrado||0;
+      t.infracao += s.infracao||0;
+      if(p.pos === 'LE') t.levantamentos += levTotalForTeam;
+      // acertos/erros da totalização não incluem saque nem levantamentos
+      const ac = (s.ataqueCerto||0) + (s.pingada||0) + (s.bloqueio||0) + (s.ace||0);
+      const er = (s.ataqueErrado||0) + (s.saqueErrado||0) + (s.passeErrado||0) + (s.infracao||0);
+      t.acertos += ac;
+      t.erros += er;
+    });
+  }
+
+  sets.forEach(s=>{
+    const aWon = s.scoreA > s.scoreB, aLost = s.scoreB > s.scoreA;
+    const bWon = s.scoreB > s.scoreA, bLost = s.scoreA > s.scoreB;
+    const levA = (s.teamAPlayers||[]).reduce((sum,p)=> sum + ((p.stats && p.stats.ataqueCerto)||0), 0);
+    const levB = (s.teamBPlayers||[]).reduce((sum,p)=> sum + ((p.stats && p.stats.ataqueCerto)||0), 0);
+    accumulate(s.teamAPlayers, levA, aWon, aLost);
+    accumulate(s.teamBPlayers, levB, bWon, bLost);
+  });
+
+  const rows = Array.from(players.entries()).map(([name, t])=>{
+    const total = t.acertos + t.erros;
+    const pct = total>0 ? (t.acertos/total*100) : 0;
+    let cls = 'pct-red';
+    if(pct > 50) cls = 'pct-blue';
+    else if(pct === 50) cls = 'pct-yellow';
+    return `<tr>
+      <td class="nm">${escapeHtml(name)}</td>
+      <td>${t.sets}</td><td>${t.wins}</td><td>${t.losses}</td>
+      <td>${t.saqueCerto}</td><td>${t.ataqueCerto}</td><td>${t.ataqueErrado}</td>
+      <td>${t.bloqueio}</td><td>${t.pingada}</td><td>${t.ace}</td>
+      <td>${t.saqueErrado}</td><td>${t.passeErrado}</td><td>${t.infracao}</td>
+      <td class="lev">${t.levantamentos}</td>
+      <td>${t.acertos}</td><td>${t.erros}</td>
+      <td class="${cls}">${pct.toFixed(1)}%</td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <table class="pdf-totals-table">
+      <thead><tr>
+        <th class="nm">Jogador</th>
+        <th>Sets</th><th>Vit</th><th>Der</th>
+        <th>Saq</th><th>Atq✓</th><th>Atq✗</th>
+        <th>Blq</th><th>Png</th><th>Ace</th>
+        <th>Sq✗</th><th>Ps✗</th><th>Inf</th>
+        <th class="lev">Levantamentos</th>
+        <th>Acertos</th><th>Erros</th><th>%Acer</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
     </table>
   `;
 }
@@ -2114,8 +2596,8 @@ function exportArchivePdf(){
     return out;
   }
 
-  const pages = chunk(setArchive, 6); // 6 sets por página = 2 colunas x 3 linhas
-  const setsHtml = pages.map(pageSets=>{
+  const pages = chunk(setArchive, 9); // 9 sets por página = 3 colunas x 3 linhas
+  const setsHtml = pages.map((pageSets, pageIdx)=>{
     const blocks = pageSets.map(s=>{
       return `
         <section class="set-block">
@@ -2131,8 +2613,16 @@ function exportArchivePdf(){
         </section>
       `;
     }).join('');
-    return `<div class="pdf-page">${blocks}</div>`;
+    const lastPageCls = pageIdx === pages.length-1 ? ' last-page' : '';
+    return `<div class="pdf-page${lastPageCls}">${blocks}</div>`;
   }).join('');
+
+  const totalsHtml = `
+    <section class="totals-block">
+      <h2 class="totals-title">Totalização Geral — Todos os Sets</h2>
+      ${buildPdfTotalsTable(setArchive)}
+    </section>
+  `;
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="UTF-8">
@@ -2142,28 +2632,44 @@ function exportArchivePdf(){
   body{ font-family: Arial, Helvetica, sans-serif; color:#111; margin:14px; }
   h1{ font-size:14px; margin:0 0 1px; }
   .gen-date{ font-size:8px; color:#666; margin-bottom:6px; }
-  .pdf-page{ display:grid; grid-template-columns:1fr 1fr; gap:0 8px; page-break-after:always; }
-  .pdf-page:last-child{ page-break-after:auto; }
+  .pdf-page{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:0 6px; page-break-after:always; }
+  .pdf-page.last-page{ page-break-after:auto; }
   .set-block{ page-break-inside: avoid; margin-bottom:5px; border-bottom:1px solid #ccc; padding-bottom:3px; min-width:0; }
   .set-head{ display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:3px; }
-  .matchup{ font-size:9px; font-weight:700; }
+  .matchup{ font-size:8px; font-weight:700; }
   .vs{ color:#888; font-weight:400; }
-  .meta{ font-size:6.5px; color:#666; }
-  .score{ font-size:11px; font-weight:700; margin:1px 0 2px; }
-  .team-name{ font-size:7.5px; font-weight:700; margin:2px 0 1px; }
+  .meta{ font-size:6px; color:#666; }
+  .score{ font-size:10px; font-weight:700; margin:1px 0 2px; }
+  .team-name{ font-size:7px; font-weight:700; margin:2px 0 1px; }
   .team-name.a{ color:#0f7c88; }
   .team-name.b{ color:#b85a1f; }
   table.pdf-table{ width:100%; border-collapse:collapse; margin-bottom:2px; table-layout:fixed; }
-  table.pdf-table th, table.pdf-table td{ border:1px solid #ccc; padding:0.5px 1px; text-align:center; font-size:5.5px; line-height:1.15; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  table.pdf-table th, table.pdf-table td{ border:1px solid #ccc; padding:0.5px 0.5px; text-align:center; font-size:5px; line-height:1.1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   table.pdf-table th{ background:#f0f0f0; font-weight:700; }
   table.pdf-table td.nm, table.pdf-table th.nm{ text-align:left; }
   table.pdf-table tr.tot td{ font-weight:700; background:#f7f7f7; }
-  @media print{ body{ margin:8mm; } }
+  .totals-block{ page-break-inside: avoid; margin-bottom:8px; padding-bottom:6px; border-bottom:2px solid #333; }
+  .totals-title{ font-size:10.5px; margin:0 0 4px; }
+  table.pdf-totals-table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+  table.pdf-totals-table th, table.pdf-totals-table td{ border:1px solid #ccc; padding:1px 2px; text-align:center; font-size:5.5px; line-height:1.15; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  table.pdf-totals-table th{ background:#f0f0f0; font-weight:700; }
+  table.pdf-totals-table td.nm, table.pdf-totals-table th.nm{ text-align:left; font-weight:700; width:12%; }
+  table.pdf-totals-table th.lev{ white-space:normal; word-break:break-word; width:8%; }
+  table.pdf-totals-table td.pct-blue{ background:#2f6fd6; color:#fff; font-weight:700; }
+  table.pdf-totals-table td.pct-yellow{ background:#e8c72f; color:#111; font-weight:700; }
+  table.pdf-totals-table td.pct-red{ background:#d9433f; color:#fff; font-weight:700; }
+  @media print{
+    body{ margin:8mm; }
+    table.pdf-totals-table td.pct-blue,
+    table.pdf-totals-table td.pct-yellow,
+    table.pdf-totals-table td.pct-red{ -webkit-print-color-adjust:exact; print-color-adjust:exact; color-adjust:exact; }
+  }
 </style>
 </head>
 <body>
   <h1>Estatisticas &mdash; Sets encerrados</h1>
   <div class="gen-date">Gerado em ${genDate}</div>
+  ${totalsHtml}
   ${setsHtml}
   <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 200); };<\/script>
 </body></html>`;
@@ -2515,7 +3021,6 @@ const VOICE_ACTION_PHRASES = [
   {key:'pingada',      phrases:['pingada','larga','largada','pingar','pingo','pigada']},
   {key:'ace',          phrases:['ace','eice','eis','aice','ecis','ei si','eici','ei se','esse','ici','ah ci','issi']},
   {key:'ataqueCerto',  phrases:['ataque certo','ataque']},
-  {key:'saqueCerto',   phrases:['saque certo','saque','sac']},
 ];
 
 // só processa a fala como comando se ela começar com uma dessas palavras
@@ -2755,80 +3260,23 @@ $('#btnVoiceCmd').addEventListener('click', ()=>{
 function applyAction(team, player, actionKey){
   pushUndoSnapshot();
 
-  const isStatOnly = actionKey === STAT_ONLY.key;
-  if(isStatOnly){
-    // início do set: ninguém sacou ainda (placar 0-0 e nenhum saque confirmado) —
-    // vale mesmo que "state.serve" tenha ficado com um valor antigo de antes dessa regra
-    const isFirstServeEver = state.serve === null || (state.score.A===0 && state.score.B===0 && !state.serveConfirmed);
-    const isTeamMismatch = !isFirstServeEver && team !== state.serve; // jogador é do time que NÃO está sacando
-
-    if(isTeamMismatch){
-      const servingTeamName = teamDisplayName(slotTeam(state.serve));
-      state.errorMessage = 'Esse jogador não é do time que está sacando! Quem saca agora é ' + servingTeamName + '.';
-      speak('Atenção! Time errado para o saque.');
-      markDirty();
-      renderAll();
-      return;
-    }
-
-    const isDoubleServe = !isFirstServeEver && state.serveConfirmed; // já tinha marcado um saque e nenhum ponto aconteceu desde então
-    if(isDoubleServe){
-      state.errorMessage = 'Não é possível marcar dois saques seguidos! Marque o ponto antes de sacar de novo.';
-      speak('Não é possível marcar dois saques seguidos.');
-      markDirty();
-      renderAll();
-      return;
-    }
-
-    const expectedId = state.servingPlayerId;
-    const isWrongServer = !isFirstServeEver && expectedId && expectedId !== player.id;
-    if(isWrongServer){
-      const expectedPlayer = findPlayerAnywhereById(expectedId);
-      const expectedName = expectedPlayer ? expectedPlayer.name : 'outro jogador';
-      state.errorMessage = 'Sacador errado! Quem deve sacar agora é ' + expectedName + '.';
-      speak('Atenção! Sacador errado. Quem saca é ' + expectedName + '.');
-      markDirty();
-      renderAll();
-      return;
-    }
-
-    player.stats.saqueCerto += 1;
-    state.errorMessage = null; // marcar o saque agora corrige o aviso de "saque esquecido"
-    if(isFirstServeEver){
-      // primeira marcação de saque da partida/set: define quem saca primeiro
-      state.serve = team;
-      const idx = POSITIONS.indexOf(player.pos);
-      if(team==='A'){ state.rotationIndexA = idx>=0 ? idx : 0; state.rotationStartedA = true; }
-      else { state.rotationIndexB = idx>=0 ? idx : 0; state.rotationStartedB = true; }
-      speak(STAT_ONLY.title + ' ' + player.name);
-    } else {
-      speak(STAT_ONLY.title + ' ' + player.name);
-    }
-    state.servingPlayerId = player.id;
-    state.serveConfirmed = true;
-    logEvent(team, player, STAT_ONLY.title, team, STAT_ONLY.key);
-    markDirty();
-    renderAll();
-    return;
-  }
   const actionDef = ACTIONS.find(a=>a.key===actionKey);
-
-  // não permite marcar ponto (ataque, bloqueio, erro etc.) sem o saque
-  // confirmado antes — exceção: o botão "+1 direto" (quickPoint) não passa
-  // por essa função, então continua livre dessa exigência
-  if(!state.serveConfirmed){
-    state.errorMessage = 'Marque o saque antes de marcar o ponto!';
-    speak('Marque o saque antes do ponto.');
-    markDirty();
-    renderAll();
-    return;
-  }
 
   if(actionKey==='ace' && state.servingPlayerId && state.servingPlayerId !== player.id){
     const server = findPlayerAnywhereById(state.servingPlayerId);
     const serverName = server ? server.name : 'outro jogador';
     state.errorMessage = 'Ace só pode ser marcado para quem sacou! Quem sacou foi ' + serverName + '.';
     speak('Atenção! Ace só vale para quem sacou, ' + serverName + '.');
+    markDirty();
+    renderAll();
+    return;
+  }
+
+  if(actionKey==='saqueErrado' && state.servingPlayerId && state.servingPlayerId !== player.id){
+    const server = findPlayerAnywhereById(state.servingPlayerId);
+    const serverName = server ? server.name : 'outro jogador';
+    state.errorMessage = 'Saque errado só pode ser marcado para quem sacou! Quem sacou foi ' + serverName + '.';
+    speak('Atenção! Saque errado só vale para quem sacou, ' + serverName + '.');
     markDirty();
     renderAll();
     return;
@@ -2933,8 +3381,8 @@ function archiveFinishedSet(a, b){
     teamBName: teamDisplayName(teamB),
     scoreA: a,
     scoreB: b,
-    teamAPlayers: teamA.players.map(p=>({name:p.name, stats: statsForPlayerInSet(p.id, state.setNum)})),
-    teamBPlayers: teamB.players.map(p=>({name:p.name, stats: statsForPlayerInSet(p.id, state.setNum)}))
+    teamAPlayers: teamA.players.map(p=>({name:p.name, pos:p.pos, stats: statsForPlayerInSet(p.id, state.setNum)})),
+    teamBPlayers: teamB.players.map(p=>({name:p.name, pos:p.pos, stats: statsForPlayerInSet(p.id, state.setNum)}))
   });
 }
 
@@ -2952,11 +3400,9 @@ function finishSet(){
 
   state.setNum += 1;
   state.score = {A:0,B:0};
-  // quem saca o novo set é definido pela primeira marcação de saque, como no início da partida
-  state.serve = null;
+  // quem saca o novo set é definido automaticamente, alternando com o set anterior
   resetRotation();
-  state.servingPlayerId = null;
-  state.errorMessage = null;
+  autoAssignFirstServe();
 
   // permanece na partida — a quadra já fica pronta para o novo set
   switchTab('court');
