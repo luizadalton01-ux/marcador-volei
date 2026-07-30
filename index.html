@@ -260,11 +260,6 @@ label.field-label{display:block; font-size:11px; text-transform:uppercase; lette
   padding:10px 12px; font-size:12.5px; color:var(--muted); margin-bottom:14px; line-height:1.5;
 }
 .infinite-note strong{color:var(--good);}
-#matchupWrap{margin-bottom:14px;}
-#matchupWrap .opt-row select{
-  flex:1; background:var(--bg-elev-2); border:1px solid var(--line); color:var(--text);
-  padding:10px; border-radius:10px; font-family:'Teko',sans-serif; font-size:17px; font-weight:600;
-}
 .opt-row{display:flex; gap:8px;}
 .opt-btn{
   flex:1; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--bg-elev-2);
@@ -365,6 +360,8 @@ label.field-label{display:block; font-size:11px; text-transform:uppercase; lette
 .team-col.b .pos-badge{background:var(--teamB);}
 .player-name{flex:1; min-width:0; font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .player-pts{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted-2); flex-shrink:0;}
+.player-serves{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted-2); flex-shrink:0;}
+.serve-player-icon{margin-right:2px;}
 
 .player-card.is-serving{border-color:rgba(244,199,68,0.55); box-shadow:0 0 0 1px rgba(244,199,68,0.35) inset;}
 .serving-tag{
@@ -536,6 +533,7 @@ table.stats-table tr:last-child td{border-bottom:none;}
   .pos-badge{width:22px; height:19px; font-size:9.5px; border-radius:6px;}
   .player-name{font-size:18px; max-width:150px;}
   .player-pts{font-size:10.5px;}
+  .player-serves{font-size:10.5px;}
   .mini-action-grid{grid-template-columns:repeat(9,1fr); gap:1px; flex:1;}
   .mini-action{padding:8px 10px; min-height:34px; font-size:12px; border-radius:8px;}
 
@@ -593,16 +591,6 @@ table.stats-table tr:last-child td{border-bottom:none;}
 
     <div id="teamsContainer"></div>
     <button class="add-team-btn" id="btnAddTeam">+ adicionar time</button>
-
-    <div class="card" id="matchConfigCard">
-      <div id="matchupWrap" class="hidden">
-        <label class="field-label">Times desta partida</label>
-        <div class="opt-row">
-          <select id="selectActiveA"></select>
-          <select id="selectActiveB"></select>
-        </div>
-      </div>
-    </div>
 
     <button class="start-btn secondary hidden" id="btnBackToMatch">Voltar para a partida</button>
     <button class="start-btn" id="btnStart">Iniciar Partida</button>
@@ -751,8 +739,56 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.49.0";
+const APP_VERSION = "3.62.0";
 const CHANGELOG = [
+  { version:"3.62.0", date:"29/07/2026", changes:[
+    "Na planilha exportada (.xls), adicionadas duas linhas em branco logo abaixo de cada linha de jogador com posição \"LI\", com \"0\" na coluna Nome."
+  ]},
+  { version:"3.61.0", date:"29/07/2026", changes:[
+    "Na planilha exportada (.xls), adicionada a coluna \"Posição\" antes da coluna \"Nome\", e a coluna \"Data\" foi movida para antes da coluna \"Set\"."
+  ]},
+  { version:"3.60.0", date:"29/07/2026", changes:[
+    "Na planilha exportada (.xls), removidas as abas \"Sets\" e \"Jogadas\"; a aba \"Estatísticas\" foi renomeada para \"Planilha1\", que agora é a única aba do arquivo."
+  ]},
+  { version:"3.59.0", date:"29/07/2026", changes:[
+    "Ajustada a posição das figurinhas no card do jogador: a bola (🏐) agora fica antes da pontuação total, e o jogador em movimento (🤾) fica antes da contagem de saques."
+  ]},
+  { version:"3.58.0", date:"29/07/2026", changes:[
+    "Adicionada uma figurinha de jogador em movimento de saque (🤾) antes da contagem de saques (🏐) no card de cada jogador."
+  ]},
+  { version:"3.57.0", date:"29/07/2026", changes:[
+    "A opção \"Líbero saca no lugar do Central (CE não saca)\", na aba Times, agora vem marcada por padrão em times novos (antes vinha desmarcada)."
+  ]},
+  { version:"3.56.0", date:"29/07/2026", changes:[
+    "Removido o campo \"Times desta partida\" da aba Times (que aparecia com 3+ times cadastrados para escolher o confronto). Agora a partida sempre começa com os 2 primeiros times cadastrados, e a troca de quem joga em cada lado continua disponível pelo botão \"⇄\" ao lado do placar durante a partida."
+  ]},
+  { version:"3.55.0", date:"29/07/2026", changes:[
+    "Na formação do elenco (aba Times), a caixa de posição dos 6 primeiros jogadores volta a mostrar todas as posições (LE, P1, CE, OP, P2, LI) sempre — mas, ao escolher uma posição já usada por outro dos 6 primeiros, os dois jogadores agora trocam de posição automaticamente entre si, mantendo sempre as 6 posições preenchidas sem repetição e a ordem LE, P1, CE, OP, P2, LI."
+  ]},
+  { version:"3.54.0", date:"29/07/2026", changes:[
+    "Relatório em PDF (aba \"Sets encerrados\") agora usa layout em 2 colunas, para conseguir encaixar os 6 sets por página como planejado (a versão anterior, em coluna única, ainda não cabia)."
+  ]},
+  { version:"3.53.0", date:"29/07/2026", changes:[
+    "Relatório em PDF (aba \"Sets encerrados\") compactado para caber 6 sets por página: fontes, tabelas e espaçamentos reduzidos, com quebra de página automática a cada 6 sets."
+  ]},
+  { version:"3.52.0", date:"29/07/2026", changes:[
+    "Adicionado botão \"📄 Baixar PDF das estatísticas\" na aba \"Sets encerrados\": gera um relatório com placar e estatísticas de cada jogador de todos os sets encerrados, abrindo a impressão do navegador para salvar como PDF."
+  ]},
+  { version:"3.51.0", date:"28/07/2026", changes:[
+    "Adicionada a quantidade de saques efetuados (🏐) no card de cada jogador, ao lado da pontuação.",
+    "Ao encerrar um set, o saque marcado automaticamente logo após o ponto final é descontado das estatísticas e do histórico — como esse saque nunca chegou a acontecer de verdade (o set já tinha terminado), ele não fica mais contando."
+  ]},
+  { version:"3.50.2", date:"28/07/2026", changes:[
+    "Trocar os times ativos na tela Times e voltar com \"Voltar para a partida\" não reinicia mais o placar, a numeração dos sets (Set 1, 2, 3...) nem o histórico — a sequência sempre continua de onde estava, mesmo com times diferentes."
+  ]},
+  { version:"3.50.1", date:"28/07/2026", changes:[
+    "O saque marcado automaticamente (a partir do 2º saque) agora também fala o comando de voz \"Saque [nome]\", igual a quando o saque é marcado manualmente pelo botão \"Saq\"."
+  ]},
+  { version:"3.50.0", date:"28/07/2026", changes:[
+    "Saque automático: a partir do 2º saque da partida/set, o app marca sozinho o saque do próximo sacador assim que um ponto é registrado (contando a estatística dele) — só o 1º saque de cada partida/set continua exigindo toque manual no botão \"Saq\".",
+    "Trocar o time em cada lado na tela de marcação (botão \"⇄\") não reinicia mais o placar, os sets nem o histórico — só troca qual time está jogando naquele lado.",
+    "Removido o botão \"Salvar alterações\": ao voltar para a tela Times durante uma partida (pelo \"◀ Voltar\"), as edições já ficam aplicadas direto — é só tocar em \"Voltar para a partida\" para continuar."
+  ]},
   { version:"3.49.0", date:"28/07/2026", changes:[
     "Salvamento na nuvem não acontece mais automaticamente logo após cada ação/ponto marcado — agora salva sozinho a cada 30 minutos (se houver alterações não salvas) ou quando você toca no botão ☁ manualmente.",
     "Adicionado botão vermelho \"🗑️ Apagar dados\" na tela Times, logo abaixo de \"Exportar dados\": apaga permanentemente times, partida atual, sets encerrados e os dados salvos na nuvem, com uma tela de confirmação em destaque antes de apagar.",
@@ -1118,18 +1154,20 @@ const CHANGELOG = [
    (ou cria um grupo novo), para o guia ficar sempre atualizado. */
 const HELP_DATA = [
   { id:"regras", icon:"📋", title:"Regras do jogo", items:[
+    { name:"Saque automático a partir do 2º saque", tag:"automático", tagCls:"good",
+      desc:"Só o 1º saque da partida (e o 1º saque de cada novo set) precisa ser marcado manualmente no botão \"Saq\", para definir quem começa sacando. Depois disso, assim que um ponto é marcado, o app já marca sozinho o saque do próximo sacador — contando a estatística de saque dele e falando o comando de voz \"Saque [nome]\", igual a uma marcação manual. Não é mais preciso tocar em \"Saq\" a cada jogada. Se esse saque automático for o do ponto que encerrou o set, ele é descontado das estatísticas — como esse saque nunca chegou a acontecer de verdade, ele não entra na contagem." },
     { name:"Ace só vale para quem sacou", tag:"bloqueia", tagCls:"bad",
       desc:"Se você marcar \"Ace\" para um jogador diferente de quem está sacando no momento, o app bloqueia a marcação e avisa (na tela e por voz) quem foi o sacador correto." },
     { name:"Não dá para marcar ponto sem confirmar o saque", tag:"bloqueia", tagCls:"bad",
-      desc:"Ataque, bloqueio, erro etc. só podem ser marcados depois que o saque da jogada foi confirmado (botão \"Saq\" ou comando de voz \"Saque [nome]\"). Exceção: o botão \"+1 direto\" (ponto direto) não exige isso." },
+      desc:"Ataque, bloqueio, erro etc. só podem ser marcados depois que o saque da jogada foi confirmado (isso acontece automaticamente a partir do 2º saque; no 1º saque da partida/set, use o botão \"Saq\" ou o comando de voz \"Saque [nome]\"). Exceção: o botão \"+1 direto\" (ponto direto) não exige isso." },
     { name:"Não dá para marcar dois saques seguidos", tag:"bloqueia", tagCls:"bad",
-      desc:"Se um saque já foi marcado e nenhum ponto aconteceu ainda, o app impede marcar outro saque em seguida. É preciso fechar a jogada (marcar o ponto) antes de sacar de novo." },
+      desc:"Como o saque já fica confirmado automaticamente depois de cada ponto, tocar em \"Saq\" de novo antes do próximo ponto é tratado como saque duplicado e é bloqueado." },
     { name:"Saque tem que ser de um jogador do time que está sacando", tag:"bloqueia", tagCls:"bad",
       desc:"Se o saque for marcado para um jogador do time que não está sacando, o app bloqueia e informa qual time deveria estar sacando." },
     { name:"Sacador errado (rodízio)", tag:"bloqueia", tagCls:"bad",
       desc:"Se o jogador marcado como sacador for diferente do esperado pelo rodízio automático, o app bloqueia a marcação e avisa (na tela e por voz) quem deveria estar sacando." },
     { name:"Aviso de saque esquecido", tag:"só avisa", tagCls:"info",
-      desc:"Se um ponto for marcado sem que o saque daquela jogada tenha sido registrado, o app mostra um aviso na tela e fala \"Atenção! Marque o saque\"." },
+      desc:"Se um ponto for marcado sem que o saque daquela jogada tenha sido registrado (só pode acontecer no 1º saque da partida/set), o app mostra um aviso na tela e fala \"Atenção! Marque o saque\"." },
     { name:"Rally scoring", tag:"placar", tagCls:"info",
       desc:"Todo ponto marcado, de qualquer time, soma no placar imediatamente. Quem ganha o ponto passa a ser o time que saca na jogada seguinte." },
     { name:"Senha para encerrar a partida", tag:"segurança", tagCls:"info",
@@ -1183,7 +1221,7 @@ function newTeam(name){
   return {
     id:uid(),
     name:name||"",
-    liberoServesForCE:false, // se ativado, o LI saca no lugar do CE (LI saca 2x no rodízio)
+    liberoServesForCE:true, // se ativado, o LI saca no lugar do CE (LI saca 2x no rodízio) — vem marcado por padrão
     players:[newPlayer("","LE"), newPlayer("","P1"), newPlayer("","CE"), newPlayer("","OP"), newPlayer("","P2"), newPlayer("","LI")]
   };
 }
@@ -1227,7 +1265,6 @@ function assignServerForRotation(team){
   const pos = positionForRotationSlot(teamObj, state[idxKey]);
   const player = teamObj ? teamObj.players.find(p=>p.pos===pos) : null;
   if(player) state.servingPlayerId = player.id;
-  state.serveConfirmed = false; // ainda não confirmado — precisa marcar o saque
 }
 function resetRotation(){
   state.rotationIndexA = 0;
@@ -1351,7 +1388,7 @@ function migrateState(loaded){
   delete loaded.rotationServedA;
   delete loaded.rotationServedB;
   if(Array.isArray(loaded.teams)){
-    loaded.teams.forEach(t=>{ if(t.liberoServesForCE === undefined) t.liberoServesForCE = false; });
+    loaded.teams.forEach(t=>{ if(t.liberoServesForCE === undefined) t.liberoServesForCE = true; });
   }
 }
 
@@ -1376,16 +1413,16 @@ function renderRosterFor(teamId){
   team.players = reorderFirstSixByPosition(team.players);
   const players = team.players;
 
-  // as posições dos 6 primeiros jogadores não podem se repetir entre si (fora "sem posição");
-  // a partir do 7º jogador, qualquer posição pode ser escolhida livremente
-  const usedByFirstSix = players.slice(0,6).map(p=>p.pos).filter(pos=>pos);
+  // os 6 primeiros jogadores podem escolher qualquer posição, mas não podem
+  // repeti-la entre si: ao escolher uma posição já usada por outro dos 6
+  // primeiros, os dois trocam de posição automaticamente (ver listener abaixo).
+  // A partir do 7º jogador, qualquer posição pode ser escolhida livremente,
+  // podendo repetir.
 
   players.forEach((p, idx)=>{
     const row = document.createElement('div');
     row.className = 'player-row';
-    const posOptions = idx < 6
-      ? POSITIONS.filter(pos => pos===p.pos || !usedByFirstSix.includes(pos))
-      : POSITIONS;
+    const posOptions = POSITIONS;
     const emptyOption = idx < 6 ? `<option value="" ${p.pos?'':'selected'}>—</option>` : '';
     row.innerHTML = `
       <input type="text" maxlength="16" placeholder="Nome do jogador" value="${escapeHtml(p.name)}" data-idx="${idx}" data-team-id="${teamId}" class="pname-input">
@@ -1408,8 +1445,18 @@ function renderRosterFor(teamId){
     sel.addEventListener('change', e=>{
       const i = +e.target.dataset.idx;
       const tId = e.target.dataset.teamId;
-      teamBy(tId).players[i].pos = e.target.value;
-      renderRosterFor(tId); // reordena e atualiza as opções disponíveis dos outros jogadores
+      const team = teamBy(tId);
+      const player = team.players[i];
+      const oldPos = player.pos;
+      const newPos = e.target.value;
+      if(i < 6 && newPos){
+        // se outro dos 6 primeiros já está nessa posição, os dois trocam:
+        // ele passa a usar a posição que este jogador tinha antes
+        const conflict = team.players.slice(0,6).find((p, idx2) => idx2!==i && p.pos===newPos);
+        if(conflict) conflict.pos = oldPos;
+      }
+      player.pos = newPos;
+      renderRosterFor(tId); // reordena e atualiza a lista após a troca
     });
   });
   $$('.rm-btn', wrap).forEach(btn=>{
@@ -1453,46 +1500,16 @@ function renderTeamsSetup(){
   });
 }
 
+/* Os times que jogam a partida usam sempre os 2 primeiros times cadastrados
+   como padrão; com 3+ times cadastrados, dá para trocar quem joga em cada
+   lado direto na tela de marcação (botão "⇄" ao lado do placar). */
 function renderMatchupSelectors(){
-  const matchWrap = $('#matchupWrap');
-  const selA = $('#selectActiveA'), selB = $('#selectActiveB');
-  const configCard = $('#matchConfigCard');
-
-  if(state.teams.length<=2){
-    matchWrap.classList.add('hidden');
-    if(configCard) configCard.classList.add('hidden');
-    state.activeAId = state.teams[0].id;
-    state.activeBId = state.teams[1].id;
-  } else {
-    matchWrap.classList.remove('hidden');
-    if(configCard) configCard.classList.remove('hidden');
-    if(!teamBy(state.activeAId)) state.activeAId = state.teams[0].id;
-    if(!teamBy(state.activeBId) || state.activeBId===state.activeAId){
-      const alt = state.teams.find(t=>t.id!==state.activeAId);
-      state.activeBId = alt ? alt.id : state.activeAId;
-    }
-    const optsHtml = state.teams.map((t,i)=>`<option value="${t.id}">Time ${i+1}</option>`).join('');
-    selA.innerHTML = optsHtml;
-    selB.innerHTML = optsHtml;
-    selA.value = state.activeAId;
-    selB.value = state.activeBId;
+  if(!teamBy(state.activeAId)) state.activeAId = state.teams[0].id;
+  if(!teamBy(state.activeBId) || state.activeBId===state.activeAId){
+    const alt = state.teams.find(t=>t.id!==state.activeAId);
+    state.activeBId = alt ? alt.id : state.activeAId;
   }
 }
-
-$('#selectActiveA').addEventListener('change', e=>{
-  state.activeAId = e.target.value;
-  if(state.activeBId===state.activeAId){
-    const alt = state.teams.find(t=>t.id!==state.activeAId);
-    if(alt){ state.activeBId = alt.id; $('#selectActiveB').value = alt.id; }
-  }
-});
-$('#selectActiveB').addEventListener('change', e=>{
-  state.activeBId = e.target.value;
-  if(state.activeAId===state.activeBId){
-    const alt = state.teams.find(t=>t.id!==state.activeBId);
-    if(alt){ state.activeAId = alt.id; $('#selectActiveA').value = alt.id; }
-  }
-});
 
 let cameFromMatch = false;
 
@@ -1504,7 +1521,7 @@ function showSetup(){
   renderMatchupSelectors();
 
   $('#btnBackToMatch').classList.toggle('hidden', !cameFromMatch);
-  $('#btnStart').textContent = cameFromMatch ? 'Salvar alterações' : 'Iniciar Partida';
+  $('#btnStart').classList.toggle('hidden', cameFromMatch);
 }
 
 document.body.addEventListener('click', (e)=>{
@@ -1550,33 +1567,6 @@ $('#btnStart').addEventListener('click', ()=>{
   });
   errEl.classList.add('hidden');
 
-  if(cameFromMatch){
-    // se o confronto (times ativos) mudou, o placar atual pertence a outra dupla de times — reinicia
-    const matchupChanged = (state.activeAId !== editEntryActiveA) || (state.activeBId !== editEntryActiveB);
-    if(matchupChanged){
-      state.serve = null;
-      resetRotation();
-      state.servingPlayerId = null;
-      state.errorMessage = null;
-      state.setNum = 1;
-      state.score = {A:0,B:0};
-      state.setsHistory = [];
-      state.setsWonA = 0; state.setsWonB = 0;
-      state.history = [];
-      undoStack = [];
-      redoStack = [];
-      activeTab = 'court';
-      editEntryActiveA = state.activeAId;
-      editEntryActiveB = state.activeBId;
-      markDirty();
-      showToast('Confronto alterado — placar reiniciado.');
-    } else {
-      markDirty();
-      showToast('Times atualizados.');
-    }
-    return;
-  }
-
   state.started = true;
   state.serve = null;
   resetRotation();
@@ -1590,6 +1580,7 @@ $('#btnStart').addEventListener('click', ()=>{
   state.history = [];
   undoStack = [];
   redoStack = [];
+  lastAutoServe = null;
   activeTab = 'court';
   markDirty();
   showMatch();
@@ -1598,6 +1589,18 @@ $('#btnStart').addEventListener('click', ()=>{
 let editEntryActiveA = null, editEntryActiveB = null;
 
 $('#btnBackToMatch').addEventListener('click', ()=>{
+  state.teams.forEach((t, ti)=>{
+    t.name = (t.name||'').trim() || ('Time ' + (ti+1));
+    t.players.forEach((p,i)=>{ if(!p.name.trim()) p.name = 'Jogador '+(i+1); });
+  });
+
+  // trocar o confronto (times ativos) aqui não reinicia mais nada — a
+  // sequência de sets (Set 1, 2, 3...), o placar e o histórico continuam
+  // exatamente de onde estavam, mesmo que os times sejam diferentes.
+  editEntryActiveA = state.activeAId;
+  editEntryActiveB = state.activeBId;
+
+  markDirty();
   cameFromMatch = false;
   showMatch();
 });
@@ -1657,10 +1660,8 @@ function renderScoreboard(){
 /* ---------------- trocar time direto na tela de marcação (3+ times) ----------------
    Cada lado do placar tem um botão "⇄" (só aparece quando há mais de 2 times
    cadastrados) que abre a lista de times para escolher quem joga naquele lado.
-   Se já existem pontos registrados na partida em curso, pede confirmação antes
-   de trocar (a troca reinicia placar/sets/histórico, exatamente como ao trocar
-   o confronto pela tela "Nova Partida"). Sem nenhum ponto registrado, troca na
-   hora, sem perguntar nada. */
+   A troca acontece na hora, sem reiniciar placar, set ou histórico — só troca
+   qual time está sendo exibido/pontuado naquele lado. */
 function openTeamSwitchSheet(slot){
   const currentId = slot==='A' ? state.activeAId : state.activeBId;
   const otherId = slot==='A' ? state.activeBId : state.activeAId;
@@ -1699,19 +1700,6 @@ function switchActiveTeam(slot, teamId){
     const alt = state.teams.find(t=>t.id!==teamId);
     if(alt){ if(slot==='A') state.activeBId = alt.id; else state.activeAId = alt.id; }
   }
-  // troca de time em andamento = confronto novo: reinicia placar, sets e histórico,
-  // igual ao que já acontece ao trocar o confronto pela tela "Nova Partida"
-  state.serve = null;
-  resetRotation();
-  state.servingPlayerId = null;
-  state.errorMessage = null;
-  state.setNum = 1;
-  state.score = {A:0,B:0};
-  state.setsHistory = [];
-  state.setsWonA = 0; state.setsWonB = 0;
-  state.history = [];
-  undoStack = [];
-  redoStack = [];
   editEntryActiveA = state.activeAId;
   editEntryActiveB = state.activeBId;
   markDirty();
@@ -1721,15 +1709,8 @@ function switchActiveTeam(slot, teamId){
 function requestTeamSwitch(slot, teamId){
   const currentId = slot==='A' ? state.activeAId : state.activeBId;
   if(teamId===currentId) return;
-  const hasPointHistory = state.history.length>0;
-  if(hasPointHistory){
-    showConfirmDialog('Já existem pontos registrados nesta partida. Trocar o time agora reinicia o placar, os sets e o histórico. Deseja continuar?', ()=>{
-      switchActiveTeam(slot, teamId);
-      showToast('Time alterado — placar reiniciado.');
-    });
-  } else {
-    switchActiveTeam(slot, teamId); // sem pontos registrados ainda — troca direto, sem perguntar nada
-  }
+  switchActiveTeam(slot, teamId);
+  showToast('Time alterado.');
 }
 
 $('#btnSwitchTeamA').addEventListener('click', ()=> openTeamSwitchSheet('A'));
@@ -1761,7 +1742,8 @@ function playerCard(p, team){
       <div class="pos-badge">${p.pos}</div>
       <div class="player-name">${escapeHtml(p.name)}</div>
       ${isServing ? '<span class="serving-tag">'+servingLabel+'</span>' : ''}
-      <div class="player-pts">${totalPointsFor(p)}pt</div>
+      <div class="player-serves"><span class="serve-player-icon" title="Saque">🤾</span>${p.stats.saqueCerto}</div>
+      <div class="player-pts">🏐${totalPointsFor(p)}pt</div>
     </div>
     <div class="mini-action-grid">
       ${statBtn}
@@ -1831,47 +1813,29 @@ function buildXlsWorkbook(sheets){
 
 function exportMatchXls(){
   const teamA = slotTeam('A'), teamB = slotTeam('B');
-  const nameA = teamDisplayName(teamA), nameB = teamDisplayName(teamB);
   const totalSets = state.setNum; // sets já encerrados + o set em curso
 
-  // ---- aba "Sets": placar de cada set jogado ----
-  const setsRows = [['Set', nameA, nameB, 'Situação']];
-  for(let i=1; i<=totalSets; i++){
-    if(i <= state.setsHistory.length){
-      const s = state.setsHistory[i-1];
-      setsRows.push([i, s.a, s.b, 'Encerrado']);
-    } else {
-      setsRows.push([i, state.score.A, state.score.B, 'Em andamento']);
-    }
-  }
-  setsRows.push([]);
-  setsRows.push(['Sets vencidos', state.setsWonA, state.setsWonB]);
-
-  // ---- aba "Estatísticas": uma linha por jogador em cada set jogado ----
-  const statsHeader = ['Nome','Saque','Ataque','Bloqueio','Pingada','Ataque errado','Saque errado','Passe errado','Infração','Ace','Set','Data'];
+  // ---- estatísticas: uma linha por jogador em cada set jogado ----
+  const statsHeader = ['Posição','Nome','Saque','Ataque','Bloqueio','Pingada','Ataque errado','Saque errado','Passe errado','Infração','Ace','Data','Set'];
   const statsRows = [statsHeader];
   const exportDate = new Date().toLocaleDateString('pt-BR');
   for(let setN=1; setN<=totalSets; setN++){
     [teamA, teamB].forEach(team=>{
       team.players.forEach(p=>{
         const s = statsForPlayerInSet(p.id, setN);
-        statsRows.push([p.name, s.saqueCerto, s.ataqueCerto, s.bloqueio, s.pingada, s.ataqueErrado, s.saqueErrado, s.passeErrado, s.infracao, s.ace, setN, exportDate]);
+        statsRows.push([p.pos, p.name, s.saqueCerto, s.ataqueCerto, s.bloqueio, s.pingada, s.ataqueErrado, s.saqueErrado, s.passeErrado, s.infracao, s.ace, exportDate, setN]);
+        if(p.pos === 'LI'){
+          // duas linhas em branco após cada líbero (LI), com "0" na coluna de nomes
+          for(let k=0; k<2; k++){
+            statsRows.push(statsHeader.map(col => col==='Nome' ? '0' : ''));
+          }
+        }
       });
     });
   }
 
-  // ---- aba "Jogadas": registro completo de cada marcação individual (nada resumido) ----
-  const playsHeader = ['Set','Time','Jogador','Ação','Placar ' + nameA, 'Placar ' + nameB];
-  const playsRows = [playsHeader];
-  state.history.forEach(ev=>{
-    const tname = ev.team==='A' ? nameA : nameB;
-    playsRows.push([ev.set, tname, ev.playerName, ev.label, ev.scoreA, ev.scoreB]);
-  });
-
   const xml = buildXlsWorkbook([
-    {name:'Sets', rows: setsRows},
-    {name:'Estatísticas', rows: statsRows},
-    {name:'Jogadas', rows: playsRows}
+    {name:'Planilha1', rows: statsRows}
   ]);
   const blob = new Blob([xml], {type:'application/vnd.ms-excel'});
   const now = new Date();
@@ -2116,6 +2080,104 @@ function buildArchiveStatsTable(players){
   `;
 }
 
+function buildPdfStatsTable(players){
+  let tot = {ataqueCerto:0,ataqueErrado:0,bloqueio:0,pingada:0,ace:0,saqueCerto:0,saqueErrado:0,passeErrado:0,infracao:0,pts:0};
+  const rows = players.map(p=>{
+    const s = p.stats;
+    const pts = ((s.ataqueCerto||0)+(s.pingada||0)+(s.bloqueio||0)+(s.ace||0)) - ((s.ataqueErrado||0)+(s.saqueErrado||0)+(s.passeErrado||0)+(s.infracao||0));
+    Object.keys(tot).forEach(k=>{ if(k!=='pts') tot[k]+=s[k]||0; });
+    tot.pts += pts;
+    return `<tr><td class="nm">${escapeHtml(p.name)}</td><td>${s.saqueCerto||0}</td><td>${s.ataqueCerto||0}</td><td>${s.ataqueErrado||0}</td><td>${s.bloqueio||0}</td><td>${s.pingada||0}</td><td>${s.ace||0}</td><td>${s.saqueErrado||0}</td><td>${s.passeErrado||0}</td><td>${s.infracao||0}</td><td>${pts}</td></tr>`;
+  }).join('');
+  return `
+    <table class="pdf-table">
+      <thead><tr><th class="nm">Jogador</th><th>Saq</th><th>Atq✓</th><th>Atq✗</th><th>Blq</th><th>Png</th><th>Ace</th><th>Sq✗</th><th>Ps✗</th><th>Inf</th><th>Pts</th></tr></thead>
+      <tbody>${rows}<tr class="tot"><td class="nm">Total</td><td>${tot.saqueCerto}</td><td>${tot.ataqueCerto}</td><td>${tot.ataqueErrado}</td><td>${tot.bloqueio}</td><td>${tot.pingada}</td><td>${tot.ace}</td><td>${tot.saqueErrado}</td><td>${tot.passeErrado}</td><td>${tot.infracao}</td><td>${tot.pts}</td></tr></tbody>
+    </table>
+  `;
+}
+
+/* Gera o PDF abrindo uma janela só com o relatório formatado e chamando a
+   impressão do navegador (o usuário escolhe "Salvar como PDF" no destino) —
+   sem depender de nenhuma biblioteca externa nem de internet. */
+function exportArchivePdf(){
+  if(!setArchive || setArchive.length===0){
+    showToast('Nenhum set encerrado para exportar.');
+    return;
+  }
+  const now = new Date();
+  const genDate = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+
+  function chunk(arr, size){
+    const out = [];
+    for(let i=0; i<arr.length; i+=size) out.push(arr.slice(i, i+size));
+    return out;
+  }
+
+  const pages = chunk(setArchive, 6); // 6 sets por página = 2 colunas x 3 linhas
+  const setsHtml = pages.map(pageSets=>{
+    const blocks = pageSets.map(s=>{
+      return `
+        <section class="set-block">
+          <div class="set-head">
+            <div class="matchup">${escapeHtml(s.teamAName)} <span class="vs">×</span> ${escapeHtml(s.teamBName)}</div>
+            <div class="meta">Set ${s.setNum} — ${formatArchiveDate(s.endedAt)}</div>
+          </div>
+          <div class="score">${s.scoreA} – ${s.scoreB}</div>
+          <div class="team-name a">${escapeHtml(s.teamAName)}</div>
+          ${buildPdfStatsTable(s.teamAPlayers)}
+          <div class="team-name b">${escapeHtml(s.teamBName)}</div>
+          ${buildPdfStatsTable(s.teamBPlayers)}
+        </section>
+      `;
+    }).join('');
+    return `<div class="pdf-page">${blocks}</div>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Estatisticas - Sets encerrados</title>
+<style>
+  * { box-sizing:border-box; }
+  body{ font-family: Arial, Helvetica, sans-serif; color:#111; margin:14px; }
+  h1{ font-size:14px; margin:0 0 1px; }
+  .gen-date{ font-size:8px; color:#666; margin-bottom:6px; }
+  .pdf-page{ display:grid; grid-template-columns:1fr 1fr; gap:0 8px; page-break-after:always; }
+  .pdf-page:last-child{ page-break-after:auto; }
+  .set-block{ page-break-inside: avoid; margin-bottom:5px; border-bottom:1px solid #ccc; padding-bottom:3px; min-width:0; }
+  .set-head{ display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:3px; }
+  .matchup{ font-size:9px; font-weight:700; }
+  .vs{ color:#888; font-weight:400; }
+  .meta{ font-size:6.5px; color:#666; }
+  .score{ font-size:11px; font-weight:700; margin:1px 0 2px; }
+  .team-name{ font-size:7.5px; font-weight:700; margin:2px 0 1px; }
+  .team-name.a{ color:#0f7c88; }
+  .team-name.b{ color:#b85a1f; }
+  table.pdf-table{ width:100%; border-collapse:collapse; margin-bottom:2px; table-layout:fixed; }
+  table.pdf-table th, table.pdf-table td{ border:1px solid #ccc; padding:0.5px 1px; text-align:center; font-size:5.5px; line-height:1.15; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  table.pdf-table th{ background:#f0f0f0; font-weight:700; }
+  table.pdf-table td.nm, table.pdf-table th.nm{ text-align:left; }
+  table.pdf-table tr.tot td{ font-weight:700; background:#f7f7f7; }
+  @media print{ body{ margin:8mm; } }
+</style>
+</head>
+<body>
+  <h1>Estatisticas &mdash; Sets encerrados</h1>
+  <div class="gen-date">Gerado em ${genDate}</div>
+  ${setsHtml}
+  <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 200); };<\/script>
+</body></html>`;
+
+  const win = window.open('', '_blank');
+  if(!win){
+    showErrorToast('Não foi possível abrir a janela de impressão. Verifique o bloqueador de pop-ups.');
+    return;
+  }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+}
+
 function openArchive(){
   const backdrop = document.createElement('div');
   backdrop.className = 'sheet-backdrop';
@@ -2152,12 +2214,14 @@ function openArchive(){
         <div class="who">Sets encerrados</div>
         <div class="close-x" id="archiveClose">✕</div>
       </div>
+      ${setArchive.length>0 ? '<button class="export-btn" id="btnArchivePdf">📄 Baixar PDF das estatísticas</button>' : ''}
       ${bodyHtml}
     </div>
   `;
   document.body.appendChild(backdrop);
   backdrop.addEventListener('click', (e)=>{
     if(e.target===backdrop || e.target.closest('#archiveClose')){ backdrop.remove(); return; }
+    if(e.target.closest('#btnArchivePdf')){ exportArchivePdf(); return; }
     const toggle = e.target.closest('.archive-stats-toggle');
     if(toggle){
       const block = $('#archiveStats'+toggle.dataset.idx);
@@ -2199,6 +2263,7 @@ async function deleteAllData(){
   setArchive = [];
   undoStack = [];
   redoStack = [];
+  lastAutoServe = null;
   cameFromMatch = false;
   activeTab = 'court';
   await cloudStorage.delete('volei_match_current');
@@ -2818,12 +2883,44 @@ function awardPoint(team, skipServeCheck){
 
   if(isSideOut){
     assignServerForRotation(team);
-  } else {
-    state.serveConfirmed = false; // a cada ponto novo, precisa marcar o saque de novo
   }
+  autoConfirmNextServe(team); // marca o saque do próximo sacador sozinho (não precisa mais tocar "Saq")
 
   markDirty();
   renderAll();
+}
+
+/* Depois de cada ponto, o saque do próximo sacador é marcado/confirmado
+   automaticamente (conta a estatística de saque, fala o comando de voz do
+   saque e libera a marcação do próximo ponto direto). Só o 1º saque da
+   partida/de cada set continua exigindo toque manual no botão "Saq" —
+   ver isFirstServeEver em applyAction. Fica guardada em lastAutoServe a
+   referência desse saque, para poder ser desfeito se o set acabar antes
+   dele realmente acontecer (ver removePendingAutoServe/finishSet). */
+let lastAutoServe = null;
+function autoConfirmNextServe(team){
+  const player = findPlayerAnywhereById(state.servingPlayerId);
+  if(player){
+    player.stats.saqueCerto += 1;
+    logEvent(team, player, STAT_ONLY.title, team, STAT_ONLY.key);
+    speak(STAT_ONLY.title + ' ' + player.name);
+    lastAutoServe = { player, entry: state.history[state.history.length-1] };
+  } else {
+    lastAutoServe = null;
+  }
+  state.serveConfirmed = true;
+}
+
+/* Remove o saque marcado automaticamente logo após o último ponto do set,
+   caso o set seja encerrado antes desse saque realmente acontecer — ele foi
+   marcado só como previsão de quem sacaria a seguir. */
+function removePendingAutoServe(){
+  if(!lastAutoServe) return;
+  const { player, entry } = lastAutoServe;
+  const idx = state.history.lastIndexOf(entry);
+  if(idx !== -1) state.history.splice(idx, 1);
+  if(player) player.stats.saqueCerto = Math.max(0, player.stats.saqueCerto - 1);
+  lastAutoServe = null;
 }
 
 function archiveFinishedSet(a, b){
@@ -2842,6 +2939,8 @@ function archiveFinishedSet(a, b){
 }
 
 function finishSet(){
+  removePendingAutoServe(); // o último saque automático (após o ponto final) nunca aconteceu de verdade
+
   const a = state.score.A, b = state.score.B;
   state.setsHistory.push({a,b});
   if(a>b) state.setsWonA++;
@@ -2916,6 +3015,7 @@ function performUndo(){
   }
   redoStack.push(clone(state));
   state = undoStack.pop();
+  lastAutoServe = null;
   markDirty();
   speak('Desfazer');
   renderAll();
@@ -2928,6 +3028,7 @@ function performRedo(){
   }
   undoStack.push(clone(state));
   state = redoStack.pop();
+  lastAutoServe = null;
   markDirty();
   speak('Refazer');
   renderAll();
