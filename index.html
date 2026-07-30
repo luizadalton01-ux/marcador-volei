@@ -778,8 +778,11 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.70.4";
+const APP_VERSION = "3.70.5";
 const CHANGELOG = [
+  { version:"3.70.5", date:"30/07/2026", changes:[
+    "Comando de voz \"saque errado\" (qualquer fala começando com \"sa\") agora é aplicado direto para o jogador que está sacando no momento, sem precisar falar nem reconhecer o nome dele."
+  ]},
   { version:"3.70.4", date:"30/07/2026", changes:[
     "Comando de voz: qualquer fala que comece com \"sa\" (ex.: \"Sa João\", sem precisar dizer \"errado\") agora é reconhecida como o comando de saque errado, já que não existe mais ação manual de saque simples."
   ]},
@@ -1259,7 +1262,7 @@ const HELP_DATA = [
     { name:"Ace só vale para quem sacou", tag:"bloqueia", tagCls:"bad",
       desc:"Se você marcar \"Ace\" para um jogador diferente de quem está sacando no momento, o app bloqueia a marcação e avisa (na tela e por voz) quem foi o sacador correto." },
     { name:"Saque errado só vale para quem sacou", tag:"bloqueia", tagCls:"bad",
-      desc:"Se você marcar \"Saque errado\" para um jogador diferente de quem está sacando no momento, o app bloqueia a marcação e avisa (na tela e por voz) quem foi o sacador correto." },
+      desc:"Se você marcar \"Saque errado\" pelo card de um jogador diferente de quem está sacando no momento, o app bloqueia a marcação e avisa (na tela e por voz) quem foi o sacador correto. Pelo comando de voz, isso não acontece: qualquer fala começando com \"sa\" já é aplicada direto para quem está sacando, sem precisar dizer ou reconhecer o nome." },
     { name:"Rally scoring", tag:"placar", tagCls:"info",
       desc:"Todo ponto marcado, de qualquer time, soma no placar imediatamente. Quem ganha o ponto passa a ser o time que saca na jogada seguinte." },
     { name:"Senha para encerrar a partida", tag:"segurança", tagCls:"info",
@@ -1271,7 +1274,7 @@ const HELP_DATA = [
     { name:"Bloqueio", tag:"+1 ponto", tagCls:"good", say:"Bloqueio [nome]", variants:"Também aceita: \"bloco\", \"block\"" },
     { name:"Ace", tag:"+1 ponto", tagCls:"good", say:"Ace [nome]", variants:"Só é aceito para quem sacou na jogada. Muitas variações de transcrição aceitas (eice, eis, aice, ecis, entre outras)." },
     { name:"Ataque errado", tag:"ponto adversário", tagCls:"bad", say:"Ataque errado [nome]", variants:"Também aceita: \"erro de ataque\", \"erro ataque\", \"ataque erro\"" },
-    { name:"Saque errado", tag:"ponto adversário", tagCls:"bad", say:"Saque errado [nome]", variants:"Só é aceito para quem sacou na jogada. Qualquer fala começando com \"sa\" (ex.: \"Saque [nome]\", \"Sac [nome]\") já é reconhecida como saque errado, sem precisar dizer \"errado\". Também aceita: \"erro de saque\", \"erro saque\", \"saque erro\"" },
+    { name:"Saque errado", tag:"ponto adversário", tagCls:"bad", say:"Sa / Saque errado", variants:"Sempre vale para quem está sacando no momento — não precisa nem falar o nome do jogador. Qualquer fala começando com \"sa\" (ex.: \"Sa\", \"Saque\", \"Sac\") já é reconhecida como saque errado. Também aceita: \"erro de saque\", \"erro saque\", \"saque erro\"" },
     { name:"Passe errado", tag:"ponto adversário", tagCls:"bad", say:"Passe errado [nome]", variants:"Também aceita: \"erro de passe\", \"erro passe\", \"passe erro\"" },
     { name:"Infração", tag:"ponto adversário", tagCls:"bad", say:"Infração [nome]", variants:"Também aceita: \"falta\"" },
     { name:"Ponto direto", tag:"+1 ponto", tagCls:"good", say:"Ponto direto [nome do time]", variants:"Precisa falar o nome exato do time, não exige saque confirmado antes." },
@@ -3155,6 +3158,22 @@ function processVoiceCommand(rawText){
     speak('Comando não reconhecido.');
     return;
   }
+
+  // "saque errado" (ou qualquer fala começando com "sa") sempre vale para
+  // quem está sacando no momento — não precisa nem reconhecer o nome falado.
+  if(actionMatch.key === 'saqueErrado'){
+    if(!state.servingPlayerId){
+      showToast('Ainda não há um sacador definido para marcar saque errado.');
+      speak('Ainda não há um sacador definido.');
+      return;
+    }
+    const server = findPlayerAnywhereById(state.servingPlayerId);
+    if(server){
+      applyAction(state.serve, server, 'saqueErrado');
+      return;
+    }
+  }
+
   const found = findPlayerByVoiceName(text);
   if(!found){
     showToast('Não entendi o jogador em: "' + rawText + '"');
