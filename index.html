@@ -805,8 +805,12 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.72.3";
+const APP_VERSION = "3.73.0";
 const CHANGELOG = [
+  { version:"3.73.0", date:"31/07/2026", changes:[
+    "Adicionada uma solicitação explícita de permissão de microfone (getUserMedia) antes de ativar o comando de voz. No Android, iniciar só o reconhecimento de voz (SpeechRecognition) às vezes não exibe o diálogo nativo \\\"Permitir que o site use o microfone?\\\" — em especial quando o app está instalado na tela inicial (PWA) ou rodando dentro de um WebView. Agora o app pede a permissão de forma explícita primeiro, o que é mais confiável nesses casos.",
+    "Mensagem de erro melhorada quando o microfone é negado no Android: agora orienta a checar tanto a permissão do site (ícone de cadeado) quanto a permissão do app/navegador nas Configurações do Android → Apps → Permissões → Microfone."
+  ]},
   { version:"3.72.3", date:"31/07/2026", changes:[
     "A figurinha (🤾) de quem está sacando, no cantinho do card do jogador, virou uma bola de vôlei (🏐) igual à do último ponto, só que tingida de amarelo.",
     "Adicionadas as siglas \\\"SQ\\\" e \\\"PT\\\" acima de cada bolinha do cantinho, identificando qual é a do sacador e qual é a do último ponto."
@@ -3252,6 +3256,39 @@ function startVoiceCommand(){
     });
   }
 
+  // Solicita o microfone explicitamente ANTES de iniciar o reconhecimento
+  // de voz. No Android, chamar apenas SpeechRecognition.start() às vezes não
+  // exibe o diálogo nativo "Permitir que o site use o microfone?" — em
+  // especial quando o app foi instalado na tela inicial (PWA) ou está rodando
+  // dentro de um WebView. Pedir getUserMedia primeiro garante que o
+  // navegador mostre essa solicitação de forma explícita e confiável.
+  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    navigator.mediaDevices.getUserMedia({audio:true})
+      .then(stream=>{
+        // só precisávamos disparar a solicitação/permissão; a captura de
+        // áudio em si fica a cargo do próprio SpeechRecognition
+        stream.getTracks().forEach(t=> t.stop());
+        beginSpeechRecognition(Ctor, insideIframe);
+      })
+      .catch(err=>{
+        console.error('[voz] solicitação de microfone (getUserMedia) negada/falhou:', err);
+        const name = err && err.name;
+        if(name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError'){
+          showErrorToast('Permissão de microfone negada. No Android: toque no ícone de cadeado/informações ao lado do endereço do site e libere o microfone; se o app estiver instalado na tela inicial, confira também em Configurações do Android → Apps → (nome do app/navegador) → Permissões → Microfone.');
+        } else if(name === 'NotFoundError' || name === 'DevicesNotFoundError'){
+          showErrorToast('Nenhum microfone encontrado no dispositivo.');
+        } else {
+          showErrorToast('Não foi possível acessar o microfone' + (err && err.message ? (': ' + err.message) : '') + '.');
+        }
+      });
+  } else {
+    // navegador sem suporte a getUserMedia — tenta iniciar o reconhecimento
+    // de voz diretamente (ele fará sua própria solicitação de permissão)
+    beginSpeechRecognition(Ctor, insideIframe);
+  }
+}
+
+function beginSpeechRecognition(Ctor, insideIframe){
   voiceRecognition = new Ctor();
   voiceRecognition.lang = 'pt-BR';
   voiceRecognition.continuous = true;
