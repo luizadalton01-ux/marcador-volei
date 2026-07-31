@@ -371,7 +371,7 @@ label.field-label{display:block; font-size:11px; text-transform:uppercase; lette
   border-radius:7px; padding:4px 7px; cursor:pointer; flex-shrink:0;
 }
 .player-card{
-  display:flex; flex-direction:column; gap:8px;
+  display:flex; flex-direction:column; gap:8px; position:relative;
   background:var(--bg-elev); border:1px solid var(--line); border-radius:12px; padding:9px 10px;
 }
 .player-info{display:flex; align-items:center; gap:7px; min-width:0;}
@@ -396,6 +396,31 @@ label.field-label{display:block; font-size:11px; text-transform:uppercase; lette
 .mini-action{
   padding:20px 8px; min-height:58px; border-radius:10px; border:1px solid var(--line); background:var(--bg-elev-2);
   color:var(--text); font-size:14px; font-weight:700; cursor:pointer; text-align:center; font-family:'Inter',sans-serif;
+}
+
+/* Bolinha de "sacando" (🏐 amarela, sigla SQ) e bolinha de "último ponto"
+   (🏐 branca, sigla PT) no cantinho do card — não fazem mais parte do grid
+   de botões. Time à esquerda: canto inferior direito (perto de onde fica o
+   botão Infração / fim do card). Time à direita: canto superior esquerdo
+   (perto do botão Ataque / início do card). Ver playerCard(). */
+.card-corner-markers{
+  position:absolute; display:flex; align-items:flex-end; gap:6px;
+  pointer-events:none; z-index:2;
+}
+.card-corner-markers.corner-end{ right:6px; top:50%; transform:translateY(-50%); }
+.card-corner-markers.corner-start{ left:6px; top:50%; transform:translateY(-50%); }
+.corner-marker-item{display:flex; flex-direction:column; align-items:center; gap:1px;}
+.corner-marker-label{
+  font-size:9px; font-weight:800; letter-spacing:0.3px; color:var(--text);
+  text-shadow:0 1px 2px rgba(0,0,0,0.6);
+}
+.corner-marker-icon{
+  font-size:28px; line-height:1;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.55));
+}
+/* bolinha de "sacando": mesma figurinha de vôlei, tingida de amarelo */
+.corner-marker-icon.serve-ball{
+  filter: sepia(1) saturate(8) hue-rotate(-8deg) brightness(1.05) drop-shadow(0 1px 3px rgba(0,0,0,0.55));
 }
 
 /* Modo de expansão: ativado pela régua de altura, faz os quadrinhos dos
@@ -559,6 +584,8 @@ table.stats-table tr:last-child td{border-bottom:none;}
   .player-serves{font-size:10.5px;}
   .mini-action-grid{grid-template-columns:repeat(9,1fr); gap:1px; flex:1;}
   .mini-action{padding:8px 10px; min-height:34px; font-size:12px; border-radius:8px;}
+  .corner-marker-icon{font-size:20px;}
+  .corner-marker-label{font-size:7px;}
 
   .bottombar-wrap{order:5; padding:6px 10px calc(6px + env(safe-area-inset-bottom)); margin:32px auto 16px;}
   .bar-btn{padding:9px 4px; font-size:11.5px;}
@@ -778,16 +805,25 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.70.5";
+const APP_VERSION = "3.72.3";
 const CHANGELOG = [
-  { version:"3.70.5", date:"30/07/2026", changes:[
-    "Comando de voz \"saque errado\" (qualquer fala começando com \"sa\") agora é aplicado direto para o jogador que está sacando no momento, sem precisar falar nem reconhecer o nome dele."
+  { version:"3.72.3", date:"31/07/2026", changes:[
+    "A figurinha (🤾) de quem está sacando, no cantinho do card do jogador, virou uma bola de vôlei (🏐) igual à do último ponto, só que tingida de amarelo.",
+    "Adicionadas as siglas \\\"SQ\\\" e \\\"PT\\\" acima de cada bolinha do cantinho, identificando qual é a do sacador e qual é a do último ponto."
   ]},
-  { version:"3.70.4", date:"30/07/2026", changes:[
-    "Comando de voz: qualquer fala que comece com \"sa\" (ex.: \"Sa João\", sem precisar dizer \"errado\") agora é reconhecida como o comando de saque errado, já que não existe mais ação manual de saque simples."
+  { version:"3.72.2", date:"31/07/2026", changes:[
+    "As figurinhas de \\\"sacando\\\"/\\\"último ponto\\\" no cantinho do card do jogador agora ficam centralizadas verticalmente (antes ficavam coladas no topo ou embaixo do cantinho)."
   ]},
-  { version:"3.70.3", date:"30/07/2026", changes:[
-    "Adicionada a regra: o ponto de \"Saque errado\" só pode ser marcado para o jogador que sacou. Se for marcado para outro jogador, a marcação é bloqueada e o app avisa (mensagem + voz) qual jogador fez o saque."
+  { version:"3.72.1", date:"31/07/2026", changes:[
+    "As figurinhas de \\\"sacando\\\" (🤾) e \\\"último ponto\\\" no card do jogador saíram de dentro do grid de botões e agora ficam num selo maior, fixado no cantinho do card (canto inferior direito para o time à esquerda, canto superior esquerdo para o time à direita) — não ocupam mais espaço de botão nem mudam a posição dos outros botões.",
+    "A bolinha vermelha do \\\"último ponto\\\" virou uma bola de vôlei (🏐), igual à usada nos outros indicadores do app."
+  ]},
+  { version:"3.72.0", date:"31/07/2026", changes:[
+    "No card do jogador, na aba de marcação: o jogador que está sacando agora ganha uma figurinha (🤾) dentro da grade de botões, colada no botão Infração (fim do card) para o time à esquerda, e colada no botão Ataque (início do card) para o time à direita.",
+    "Adicionada a mesma indicação para o jogador que efetuou o último ponto marcado: uma bolinha (🔴) na mesma posição (fim do card à esquerda / início do card à direita) — ajuda a identificar rapidamente quem sacou e quem fez o último ponto, inclusive quando é o mesmo jogador (ace)."
+  ]},
+  { version:"3.71.0", date:"31/07/2026", changes:[
+    "Corrigida divergência entre o PDF e a planilha exportada (.xls): a planilha recalculava as estatísticas de cada set usando o elenco ATUAL dos times (inclusive o set em andamento, ainda não encerrado), então trocas de jogador entre sets faziam aparecer jogadores zerados ou sets fantasmas. Agora a planilha usa os mesmos sets já encerrados e arquivados que alimentam o PDF, garantindo que os dois arquivos mostrem sempre os mesmos números."
   ]},
   { version:"3.70.2", date:"30/07/2026", changes:[
     "No PDF de \"Sets encerrados\", o quadro de totalização geral passou a aparecer acima da lista de sets, em vez de abaixo do último set."
@@ -1261,8 +1297,6 @@ const HELP_DATA = [
       desc:"A partir de quem começa sacando (escolhido na caixa \"Começa sacando\") e da posição marcada como \"inicia o saque\" no elenco de cada time, o app já registra sozinho o 1º saque do set. Depois, a cada ponto marcado, o próximo sacador também é definido e contado sozinho. Não existe mais botão ou comando de voz para marcar o saque manualmente. Se o último saque automático do set for o do ponto que o encerrou, ele é descontado das estatísticas — como esse saque nunca chegou a acontecer de verdade, ele não entra na contagem." },
     { name:"Ace só vale para quem sacou", tag:"bloqueia", tagCls:"bad",
       desc:"Se você marcar \"Ace\" para um jogador diferente de quem está sacando no momento, o app bloqueia a marcação e avisa (na tela e por voz) quem foi o sacador correto." },
-    { name:"Saque errado só vale para quem sacou", tag:"bloqueia", tagCls:"bad",
-      desc:"Se você marcar \"Saque errado\" pelo card de um jogador diferente de quem está sacando no momento, o app bloqueia a marcação e avisa (na tela e por voz) quem foi o sacador correto. Pelo comando de voz, isso não acontece: qualquer fala começando com \"sa\" já é aplicada direto para quem está sacando, sem precisar dizer ou reconhecer o nome." },
     { name:"Rally scoring", tag:"placar", tagCls:"info",
       desc:"Todo ponto marcado, de qualquer time, soma no placar imediatamente. Quem ganha o ponto passa a ser o time que saca na jogada seguinte." },
     { name:"Senha para encerrar a partida", tag:"segurança", tagCls:"info",
@@ -1274,7 +1308,7 @@ const HELP_DATA = [
     { name:"Bloqueio", tag:"+1 ponto", tagCls:"good", say:"Bloqueio [nome]", variants:"Também aceita: \"bloco\", \"block\"" },
     { name:"Ace", tag:"+1 ponto", tagCls:"good", say:"Ace [nome]", variants:"Só é aceito para quem sacou na jogada. Muitas variações de transcrição aceitas (eice, eis, aice, ecis, entre outras)." },
     { name:"Ataque errado", tag:"ponto adversário", tagCls:"bad", say:"Ataque errado [nome]", variants:"Também aceita: \"erro de ataque\", \"erro ataque\", \"ataque erro\"" },
-    { name:"Saque errado", tag:"ponto adversário", tagCls:"bad", say:"Sa / Saque errado", variants:"Sempre vale para quem está sacando no momento — não precisa nem falar o nome do jogador. Qualquer fala começando com \"sa\" (ex.: \"Sa\", \"Saque\", \"Sac\") já é reconhecida como saque errado. Também aceita: \"erro de saque\", \"erro saque\", \"saque erro\"" },
+    { name:"Saque errado", tag:"ponto adversário", tagCls:"bad", say:"Saque errado [nome]", variants:"Também aceita: \"erro de saque\", \"erro saque\", \"saque erro\"" },
     { name:"Passe errado", tag:"ponto adversário", tagCls:"bad", say:"Passe errado [nome]", variants:"Também aceita: \"erro de passe\", \"erro passe\", \"passe erro\"" },
     { name:"Infração", tag:"ponto adversário", tagCls:"bad", say:"Infração [nome]", variants:"Também aceita: \"falta\"" },
     { name:"Ponto direto", tag:"+1 ponto", tagCls:"good", say:"Ponto direto [nome do time]", variants:"Precisa falar o nome exato do time, não exige saque confirmado antes." },
@@ -1440,6 +1474,7 @@ function autoAssignFirstServe(){
 
   state.serve = startingTeam;
   state.errorMessage = null;
+  state.lastScorerPlayerId = null; // não faz sentido carregar o último ponto do set anterior
   if(player){
     state.servingPlayerId = player.id;
     player.stats.saqueCerto += 1;
@@ -1568,6 +1603,7 @@ function defaultState(){
     firstServeTeam:"A",     // Aba de marcação — qual time começa sacando (escolha manual, não alterna sozinho)
     serve: null, // indefinido até o início da partida/set definir quem saca primeiro
     servingPlayerId: null, // jogador marcado como sacando (indicação visual)
+    lastScorerPlayerId: null, // jogador que efetuou o último ponto marcado (indicação visual)
     serveConfirmed: false, // true depois que o saque desta jogada foi marcado (botão Saq)
     errorMessage: null,    // erro de marcação (saque esquecido/errado) — some só quando corrigido
     rotationIndexA: 0,      // posição atual do rodízio do time A (índice em POSITIONS)
@@ -1664,6 +1700,7 @@ function migrateState(loaded){
     delete loaded.bestOf;
   }
   if(loaded.servingPlayerId === undefined) loaded.servingPlayerId = null;
+  if(loaded.lastScorerPlayerId === undefined) loaded.lastScorerPlayerId = null;
   if(loaded.serveConfirmed === undefined) loaded.serveConfirmed = false;
   if(loaded.errorMessage === undefined) loaded.errorMessage = null;
   if(loaded.rotationIndexA === undefined) loaded.rotationIndexA = loaded.rotationIndex || 0;
@@ -2128,12 +2165,31 @@ function renderCourt(){
 function playerCard(p, team){
   const card = document.createElement('div');
   const isServing = state.servingPlayerId === p.id;
+  const isLastScorer = state.lastScorerPlayerId === p.id;
   card.className = 'player-card' + (isServing ? ' is-serving' : '');
   const actionBtns = ACTIONS.map(a=>
     `<button class="mini-action ${a.cls}" data-team="${team}" data-player="${p.id}" data-action="${a.key}">${a.short}</button>`
   ).join('');
   const servingLabel = state.serveConfirmed ? '🏐 Sacou' : '🏐 Sacar';
+
+  // bolinha de quem está sacando (🏐 amarela, sigla "SQ" acima) e bolinha de
+  // quem fez o último ponto (🏐 branca, sigla "PT" acima): ficam num selo no
+  // cantinho do card, por cima dos botões — no time à esquerda (A), no canto
+  // inferior direito (perto de onde fica o botão Infração); no time à
+  // direita (B), no canto superior esquerdo (perto do botão Ataque).
+  const serveFigurine = isServing
+    ? '<div class="corner-marker-item"><span class="corner-marker-label">SQ</span><span class="corner-marker-icon serve-ball" title="Sacando">🏐</span></div>'
+    : '';
+  const lastPointDot = isLastScorer
+    ? '<div class="corner-marker-item"><span class="corner-marker-label">PT</span><span class="corner-marker-icon" title="Último ponto">🏐</span></div>'
+    : '';
+  const cornerCls = team === 'A' ? 'corner-end' : 'corner-start';
+  const cornerMarkers = (serveFigurine || lastPointDot)
+    ? `<div class="card-corner-markers ${cornerCls}">${serveFigurine}${lastPointDot}</div>`
+    : '';
+
   card.innerHTML = `
+    ${cornerMarkers}
     <div class="player-info">
       <div class="pos-badge">${p.pos}</div>
       <div class="player-name">${escapeHtml(p.name)}</div>
@@ -2207,18 +2263,19 @@ function buildXlsWorkbook(sheets){
 }
 
 function exportMatchXls(){
-  const teamA = slotTeam('A'), teamB = slotTeam('B');
-  const totalSets = state.setNum; // sets já encerrados + o set em curso
-
-  // ---- estatísticas: uma linha por jogador em cada set jogado ----
+  // Usa a MESMA fonte de dados do PDF (setArchive: sets já encerrados,
+  // com o elenco e as posições de cada jogador tal como estavam naquele
+  // set) — evita divergência entre os dois arquivos e não inclui o set
+  // em andamento (ainda não encerrado).
   const statsHeader = ['Posição','Nome','Saque','Ataque','Bloqueio','Pingada','Ataque errado','Saque errado','Passe errado','Infração','Ace','Data','Set'];
   const statsRows = [statsHeader];
-  const exportDate = new Date().toLocaleDateString('pt-BR');
-  for(let setN=1; setN<=totalSets; setN++){
-    [teamA, teamB].forEach(team=>{
-      team.players.forEach(p=>{
-        const s = statsForPlayerInSet(p.id, setN);
-        statsRows.push([p.pos, p.name, s.saqueCerto, s.ataqueCerto, s.bloqueio, s.pingada, s.ataqueErrado, s.saqueErrado, s.passeErrado, s.infracao, s.ace, exportDate, setN]);
+  const sets = [...setArchive].sort((a,b)=> a.setNum - b.setNum);
+  sets.forEach(set=>{
+    const setDate = new Date(set.endedAt).toLocaleDateString('pt-BR');
+    [set.teamAPlayers, set.teamBPlayers].forEach(players=>{
+      (players||[]).forEach(p=>{
+        const s = p.stats || {};
+        statsRows.push([p.pos, p.name, s.saqueCerto||0, s.ataqueCerto||0, s.bloqueio||0, s.pingada||0, s.ataqueErrado||0, s.saqueErrado||0, s.passeErrado||0, s.infracao||0, s.ace||0, setDate, set.setNum]);
         if(p.pos === 'LI'){
           // duas linhas em branco após cada líbero (LI), com "0" na coluna de nomes
           for(let k=0; k<2; k++){
@@ -2227,7 +2284,7 @@ function exportMatchXls(){
         }
       });
     });
-  }
+  });
 
   const xml = buildXlsWorkbook([
     {name:'Planilha1', rows: statsRows}
@@ -2992,9 +3049,8 @@ function applyVoiceSynonyms(text){
 // quando o comando de voz tem 2 ou mais palavras, a PRIMEIRA palavra é
 // entendida pelo prefixo com que começa (cobre qualquer variação de
 // transcrição que comece assim, mesmo que não esteja na lista de sinônimos):
-// "at"->ataque, "sa"->saque (tratado como saque errado, já que não existe
-// mais ação manual de saque simples), "pi"->pingada, "bl"->bloqueio,
-// "ei"->ace, "er"->erro, "pa"->passe, "in"->infração
+// "at"->ataque, "sa"->saque, "pi"->pingada, "bl"->bloqueio, "ei"->ace,
+// "er"->erro, "pa"->passe, "in"->infração
 const VOICE_FIRST_WORD_PREFIXES = [
   {prefix:'at', word:'ataque'},
   {prefix:'sa', word:'saque'},
@@ -3019,12 +3075,9 @@ function applyFirstWordPrefix(text){
 
 // ordem importa: frases mais específicas primeiro, para não confundir
 // "ataque errado" com "ataque", "saque errado" com "saque" etc.
-// "saque" sozinho (sem a palavra "errado") também conta como saque errado,
-// já que não existe mais ação manual de saque simples — todo comando que
-// comece com "sa" (via prefixo acima) é entendido como saque errado.
 const VOICE_ACTION_PHRASES = [
   {key:'ataqueErrado', phrases:['ataque errado','erro de ataque','erro ataque','ataque erro']},
-  {key:'saqueErrado',  phrases:['saque errado','erro de saque','erro saque','saque erro','saque']},
+  {key:'saqueErrado',  phrases:['saque errado','erro de saque','erro saque','saque erro']},
   {key:'passeErrado',  phrases:['passe errado','erro de passe','erro passe','passe erro']},
   {key:'infracao',     phrases:['infracao','falta']},
   {key:'bloqueio',     phrases:['bloqueio','bloco','block']},
@@ -3158,22 +3211,6 @@ function processVoiceCommand(rawText){
     speak('Comando não reconhecido.');
     return;
   }
-
-  // "saque errado" (ou qualquer fala começando com "sa") sempre vale para
-  // quem está sacando no momento — não precisa nem reconhecer o nome falado.
-  if(actionMatch.key === 'saqueErrado'){
-    if(!state.servingPlayerId){
-      showToast('Ainda não há um sacador definido para marcar saque errado.');
-      speak('Ainda não há um sacador definido.');
-      return;
-    }
-    const server = findPlayerAnywhereById(state.servingPlayerId);
-    if(server){
-      applyAction(state.serve, server, 'saqueErrado');
-      return;
-    }
-  }
-
   const found = findPlayerByVoiceName(text);
   if(!found){
     showToast('Não entendi o jogador em: "' + rawText + '"');
@@ -3298,18 +3335,13 @@ function applyAction(team, player, actionKey){
     return;
   }
 
-  if(actionKey==='saqueErrado' && state.servingPlayerId && state.servingPlayerId !== player.id){
-    const server = findPlayerAnywhereById(state.servingPlayerId);
-    const serverName = server ? server.name : 'outro jogador';
-    state.errorMessage = 'Saque errado só pode ser marcado para quem sacou! Quem sacou foi ' + serverName + '.';
-    speak('Atenção! Saque errado só vale para quem sacou, ' + serverName + '.');
-    markDirty();
-    renderAll();
-    return;
-  }
-
   player.stats[actionKey] += 1;
   speak(actionDef.title + ' ' + player.name);
+
+  // marca quem efetuou o último ponto — só quando o próprio jogador pontuou
+  // diretamente (ataque certo, pingada, bloqueio, ace); erros dão ponto ao
+  // adversário, então ninguém "efetuou" o ponto nesse caso
+  state.lastScorerPlayerId = actionDef.pt>0 ? player.id : null;
 
   const winningTeam = actionDef.pt>0 ? team : (team==='A'?'B':'A');
   logEvent(team, player, actionDef.title, winningTeam, actionDef.key);
@@ -3318,6 +3350,7 @@ function applyAction(team, player, actionKey){
 
 function quickPoint(team){
   pushUndoSnapshot();
+  state.lastScorerPlayerId = null; // ponto direto não tem jogador específico associado
   logEvent(team, {name:'Ponto direto'}, 'Ponto direto', team, null);
   speak('Ponto direto ' + teamDisplayName(slotTeam(team)));
   awardPoint(team, true); // exceção: "+1 direto" não exige saque confirmado antes
