@@ -401,6 +401,11 @@ label.field-label{display:block; font-size:11px; text-transform:uppercase; lette
 .serve-player-icon{margin-right:2px;}
 
 .player-card.is-serving{border-color:rgba(244,199,68,0.55); box-shadow:0 0 0 1px rgba(244,199,68,0.35) inset;}
+.player-card.is-last-scorer{border-color:rgba(255,255,255,0.55); box-shadow:0 0 0 1px rgba(255,255,255,0.35) inset;}
+.player-card.is-serving.is-last-scorer{
+  border-color:rgba(244,199,68,0.55);
+  box-shadow:0 0 0 1px rgba(244,199,68,0.35) inset, 0 0 0 3px rgba(255,255,255,0.35) inset;
+}
 .serving-tag{
   font-size:9.5px; font-weight:800; color:#0c0904; background:#f4c744;
   padding:2px 6px; border-radius:6px; white-space:nowrap; flex-shrink:0; letter-spacing:0.2px;
@@ -819,8 +824,11 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.74.0";
+const APP_VERSION = "3.75.0";
 const CHANGELOG = [
+  { version:"3.75.0", date:"01/08/2026", changes:[
+    "Adicionada borda branca no card do jogador que efetuou o último ponto, igual à borda amarela já existente para quem está sacando. Se o mesmo jogador estiver sacando e também tiver feito o último ponto, o card mostra as duas bordas juntas (amarela por fora, branca por dentro)."
+  ]},
   { version:"3.74.0", date:"01/08/2026", changes:[
     "Adicionado comando de voz por código numérico: agora dá pra marcar ação de um jogador só falando o código (em algarismos, ex.: \"71\", ou por extenso, ex.: \"setenta e um\"), sem precisar dizer o nome. O código é posição do jogador (1-6 = Time 1, 7-12 = Time 2, na ordem do elenco) × 10 + dígito da ação (1 ataque, 2 pingada, 3 bloqueio, 4 ace, 5 ataque errado, 6 saque errado, 7 passe errado, 8 infração). Documentado no guia de ajuda (❓), na aba \"Comandos de voz — código numérico\"."
   ]},
@@ -2220,7 +2228,7 @@ function playerCard(p, team){
   const card = document.createElement('div');
   const isServing = state.servingPlayerId === p.id;
   const isLastScorer = state.lastScorerPlayerId === p.id;
-  card.className = 'player-card' + (isServing ? ' is-serving' : '');
+  card.className = 'player-card' + (isServing ? ' is-serving' : '') + (isLastScorer ? ' is-last-scorer' : '');
   const actionBtns = ACTIONS.map(a=>
     `<button class="mini-action ${a.cls}" data-team="${team}" data-player="${p.id}" data-action="${a.key}">${a.short}</button>`
   ).join('');
