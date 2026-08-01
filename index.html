@@ -151,6 +151,20 @@ body{min-height:100vh; display:flex; flex-direction:column;}
 }
 .help-note b{color:var(--text);}
 .help-empty{text-align:center; color:var(--muted-2); font-size:12.5px; padding:24px 0;}
+.help-table-wrap{background:var(--bg-elev-2); border:1px solid var(--line); border-radius:12px; overflow-x:auto;}
+.help-cmd-table{width:100%; border-collapse:collapse; font-size:12px;}
+.help-cmd-table th{
+  text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:0.4px;
+  color:var(--muted); background:var(--bg-elev); padding:9px 12px; border-bottom:1px solid var(--line);
+}
+.help-cmd-table td{padding:9px 12px; border-bottom:1px solid var(--line); color:var(--text); vertical-align:top; line-height:1.5;}
+.help-cmd-table tr:last-child td{border-bottom:none;}
+.help-cmd-table td.help-cmd-acao{font-weight:700; white-space:nowrap;}
+.help-cmd-table td.help-cmd-lista{color:var(--muted);}
+.help-cmd-table td.help-cmd-lista code{
+  display:inline-block; background:var(--bg-elev); border:1px solid var(--line); border-radius:6px;
+  padding:2px 6px; margin:2px 3px 2px 0; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--text);
+}
 .changelog-entry{border-bottom:1px solid var(--line); padding:12px 2px;}
 .changelog-entry:last-child{border-bottom:none;}
 .changelog-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px;}
@@ -805,8 +819,11 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.73.0";
+const APP_VERSION = "3.74.0";
 const CHANGELOG = [
+  { version:"3.74.0", date:"01/08/2026", changes:[
+    "Adicionado comando de voz por código numérico: agora dá pra marcar ação de um jogador só falando o código (em algarismos, ex.: \"71\", ou por extenso, ex.: \"setenta e um\"), sem precisar dizer o nome. O código é posição do jogador (1-6 = Time 1, 7-12 = Time 2, na ordem do elenco) × 10 + dígito da ação (1 ataque, 2 pingada, 3 bloqueio, 4 ace, 5 ataque errado, 6 saque errado, 7 passe errado, 8 infração). Documentado no guia de ajuda (❓), na aba \"Comandos de voz — código numérico\"."
+  ]},
   { version:"3.73.0", date:"31/07/2026", changes:[
     "Adicionada uma solicitação explícita de permissão de microfone (getUserMedia) antes de ativar o comando de voz. No Android, iniciar só o reconhecimento de voz (SpeechRecognition) às vezes não exibe o diálogo nativo \\\"Permitir que o site use o microfone?\\\" — em especial quando o app está instalado na tela inicial (PWA) ou rodando dentro de um WebView. Agora o app pede a permissão de forma explícita primeiro, o que é mais confiável nesses casos.",
     "Mensagem de erro melhorada quando o microfone é negado no Android: agora orienta a checar tanto a permissão do site (ícone de cadeado) quanto a permissão do app/navegador nas Configurações do Android → Apps → Permissões → Microfone."
@@ -1317,6 +1334,20 @@ const HELP_DATA = [
     { name:"Infração", tag:"ponto adversário", tagCls:"bad", say:"Infração [nome]", variants:"Também aceita: \"falta\"" },
     { name:"Ponto direto", tag:"+1 ponto", tagCls:"good", say:"Ponto direto [nome do time]", variants:"Precisa falar o nome exato do time, não exige saque confirmado antes." },
   ], note:"💡 O reconhecimento de nome tolera pequenas variações de pronúncia/transcrição (ex.: \"João\" também reconhece \"Jão\"). A palavra da ação precisa vir no <b>início</b> da frase — falas que não começam com uma palavra de comando são ignoradas silenciosamente. Além disso, quando o comando tem 2 ou mais palavras, a <b>primeira palavra</b> já é reconhecida só pelo prefixo: começou com \"at\" vira \"ataque\", \"sa\" vira \"saque\", \"pi\" vira \"pingada\", \"bl\" vira \"bloqueio\", \"ei\" vira \"ace\", \"er\" vira \"erro\", \"pa\" vira \"passe\", \"in\" vira \"infração\"." },
+  { id:"codigo", icon:"🔢", title:"Comandos de voz — código numérico", items:[
+    { name:"Marcar por código", tag:"atalho rápido", tagCls:"good", say:"[código]",
+      variants:"Fale só o número do código, em algarismos (\"setenta e um\") ou por extenso (\"71\") — o app marca a ação do jogador correspondente na hora, sem precisar dizer o nome." },
+  ], table:`
+    <table class="help-cmd-table">
+      <thead><tr><th>Código</th><th>Como calcular</th></tr></thead>
+      <tbody>
+        <tr><td class="help-cmd-acao">Fórmula</td><td class="help-cmd-lista">código = <b>posição do jogador</b> × 10 + <b>dígito da ação</b></td></tr>
+        <tr><td class="help-cmd-acao">Posição do jogador</td><td class="help-cmd-lista">1 a 6 = jogadores do Time 1, na ordem do elenco · 7 a 12 = jogadores do Time 2, na ordem do elenco</td></tr>
+        <tr><td class="help-cmd-acao">Dígito da ação</td><td class="help-cmd-lista"><code>1 ataque</code><code>2 pingada</code><code>3 bloqueio</code><code>4 ace</code><code>5 ataque errado</code><code>6 saque errado</code><code>7 passe errado</code><code>8 infração</code></td></tr>
+        <tr><td class="help-cmd-acao">Exemplos</td><td class="help-cmd-lista"><code>11 = jogador 1, ataque</code><code>24 = jogador 2, ace</code><code>71 = jogador 7, ataque</code><code>128 = jogador 12, infração</code></td></tr>
+      </tbody>
+    </table>
+  `, note:"💡 Essa é a mesma numeração da planilha de códigos (jogador × ação). Se o código falado não corresponder a nenhum jogador existente no time (ex.: time com menos de 6 jogadores), o app avisa \"Código não reconhecido\" em vez de marcar." },
   { id:"info", icon:"🗣️", title:"Comandos de voz — informativos", items:[
     { name:"Placar", tag:"fala em voz alta", tagCls:"info", say:"Placar", variants:"Funciona em qualquer posição da frase. O app fala o placar atual dos dois times." },
     { name:"Última marcação", tag:"fala em voz alta", tagCls:"info", say:"Última marcação", variants:"Também aceita: \"qual foi a última marcação\", \"último histórico\", \"última histórico\"" },
@@ -1324,6 +1355,25 @@ const HELP_DATA = [
   { id:"controle", icon:"⏪", title:"Comandos de voz — controle", items:[
     { name:"Desfazer", tag:"desfaz última ação", tagCls:"info", say:"Desfazer", variants:"Equivale a tocar o botão de desfazer." },
   ]},
+  { id:"tabela", icon:"📊", title:"Tabela de comandos de voz", items:[], table:`
+    <table class="help-cmd-table">
+      <thead><tr><th>Ação</th><th>Comandos de voz (com variações)</th></tr></thead>
+      <tbody>
+        <tr><td class="help-cmd-acao">Ataque</td><td class="help-cmd-lista"><code>Ataque [nome]</code><code>Ataque certo [nome]</code></td></tr>
+        <tr><td class="help-cmd-acao">Pingada / largada</td><td class="help-cmd-lista"><code>Pingada [nome]</code><code>Larga [nome]</code><code>Largada [nome]</code><code>Pingar [nome]</code><code>Pingo [nome]</code><code>Pigada [nome]</code></td></tr>
+        <tr><td class="help-cmd-acao">Bloqueio</td><td class="help-cmd-lista"><code>Bloqueio [nome]</code><code>Bloco [nome]</code><code>Block [nome]</code></td></tr>
+        <tr><td class="help-cmd-acao">Ace</td><td class="help-cmd-lista"><code>Ace [nome]</code><code>Eice [nome]</code><code>Eis [nome]</code><code>Aice [nome]</code><code>Ecis [nome]</code><code>Ei si [nome]</code><code>Eici [nome]</code><code>Ei se [nome]</code><code>Esse [nome]</code><code>Ici [nome]</code><code>Ah ci [nome]</code><code>Issi [nome]</code></td></tr>
+        <tr><td class="help-cmd-acao">Ataque errado</td><td class="help-cmd-lista"><code>Ataque errado [nome]</code><code>Erro de ataque [nome]</code><code>Erro ataque [nome]</code><code>Ataque erro [nome]</code></td></tr>
+        <tr><td class="help-cmd-acao">Saque errado</td><td class="help-cmd-lista"><code>Saque errado [nome]</code><code>Erro de saque [nome]</code><code>Erro saque [nome]</code><code>Saque erro [nome]</code></td></tr>
+        <tr><td class="help-cmd-acao">Passe errado</td><td class="help-cmd-lista"><code>Passe errado [nome]</code><code>Erro de passe [nome]</code><code>Erro passe [nome]</code><code>Passe erro [nome]</code></td></tr>
+        <tr><td class="help-cmd-acao">Infração</td><td class="help-cmd-lista"><code>Infração [nome]</code><code>Falta [nome]</code></td></tr>
+        <tr><td class="help-cmd-acao">Ponto direto</td><td class="help-cmd-lista"><code>Ponto direto [nome do time]</code></td></tr>
+        <tr><td class="help-cmd-acao">Placar <span style="opacity:.6">(informativo)</span></td><td class="help-cmd-lista"><code>Placar</code></td></tr>
+        <tr><td class="help-cmd-acao">Última marcação <span style="opacity:.6">(informativo)</span></td><td class="help-cmd-lista"><code>Última marcação</code><code>Qual foi a última marcação</code><code>Último histórico</code><code>Última histórico</code></td></tr>
+        <tr><td class="help-cmd-acao">Desfazer <span style="opacity:.6">(controle)</span></td><td class="help-cmd-lista"><code>Desfazer</code></td></tr>
+      </tbody>
+    </table>
+  `, note:"💡 Além das variações listadas, o app também aceita: 1) prefixo da 1ª palavra — \"at\"→ataque, \"sa\"→saque, \"pi\"→pingada, \"bl\"→bloqueio, \"ei\"→ace, \"er\"→erro, \"pa\"→passe, \"in\"→infração; 2) pequenos erros de transcrição em palavras já cadastradas (ex.: \"sac\"→saque, \"err/erru/ero/eru\"→erro, \"paz/pass/passi/pasi\"→passe); e 3) pequenas variações no nome do jogador (ex.: \"João\" também reconhece \"Jão\"). O comando precisa começar com a palavra de ação; falas que não começam assim são ignoradas." },
   { id:"app", icon:"⚙️", title:"App e dados", items:[
     { name:"Salvar na nuvem (☁)", tag:"a cada 30 min ou manual", tagCls:"info",
       desc:"O app salva os dados na nuvem automaticamente a cada 30 minutos (se houver alterações não salvas) e também quando você toca no botão ☁ no topo. Não salva mais a cada ponto marcado — uma bolinha vermelha no ☁ indica que há alterações ainda não salvas." },
@@ -2435,7 +2485,8 @@ function renderHelpBody(filterId, query){
   let anyItem = false;
   const sectionsHtml = HELP_DATA.map(group=>{
     if(filterId!=='all' && group.id!==filterId) return '';
-    const itemsHtml = group.items.map(it=>{
+
+    const itemsHtml = (group.items||[]).map(it=>{
       const haystack = normalizeVoiceText([it.name, it.tag, it.desc||'', it.say||'', it.variants||''].join(' '));
       if(q && !haystack.includes(q)) return '';
       anyItem = true;
@@ -2451,11 +2502,23 @@ function renderHelpBody(filterId, query){
         </div>
       `;
     }).join('');
-    if(!itemsHtml) return '';
+
+    // grupo pode ter também (ou só) uma tabela, além dos cards de item
+    let tableHtml = '';
+    if(group.table){
+      const tableHaystack = normalizeVoiceText(group.table.replace(/<[^>]+>/g,' '));
+      if(!q || tableHaystack.includes(q)){
+        anyItem = true;
+        tableHtml = `<div class="help-table-wrap">${group.table}</div>`;
+      }
+    }
+
+    if(!itemsHtml && !tableHtml) return '';
     return `
       <div class="help-section">
         <div class="help-section-title">${group.icon} ${escapeHtml(group.title)}</div>
-        <div class="help-card">${itemsHtml}</div>
+        ${itemsHtml ? `<div class="help-card">${itemsHtml}</div>` : ''}
+        ${tableHtml}
         ${group.note ? `<div class="help-note">${group.note}</div>` : ''}
       </div>
     `;
@@ -3050,6 +3113,73 @@ function applyVoiceSynonyms(text){
   return text;
 }
 
+/* ---------------- comando de voz por código numérico ----------------
+   Cada jogador tem uma posição fixa de 1 a 12 (1-6 = jogadores do Time 1,
+   na ordem do elenco; 7-12 = jogadores do Time 2, na ordem do elenco) e
+   cada ação tem um dígito de 1 a 8 (1=ataque, 2=pingada, 3=bloqueio,
+   4=ace, 5=ataque errado, 6=saque errado, 7=passe errado, 8=infração).
+   O código falado é: posição*10 + ação (ex.: jogador 7, ataque = 71;
+   jogador 12, infração = 128). Basta falar só o número, em algarismos
+   ("setenta e um") ou por extenso ("71"), para marcar direto. */
+const VOICE_CODE_ACTION_MAP = {1:'ataqueCerto', 2:'pingada', 3:'bloqueio', 4:'ace', 5:'ataqueErrado', 6:'saqueErrado', 7:'passeErrado', 8:'infracao'};
+
+const VOICE_NUMBER_WORDS = {
+  'zero':0,'um':1,'uma':1,'dois':2,'duas':2,'tres':3,'quatro':4,'cinco':5,'seis':6,'sete':7,'oito':8,'nove':9,
+  'dez':10,'onze':11,'doze':12,'treze':13,'catorze':14,'quatorze':14,'quinze':15,
+  'dezesseis':16,'dezasseis':16,'dezessete':17,'dezassete':17,'dezoito':18,'dezenove':19,'dezanove':19,
+  'vinte':20,'trinta':30,'quarenta':40,'cinquenta':50,'sessenta':60,'setenta':70,'oitenta':80,'noventa':90,
+  'cem':100,'cento':100
+};
+
+// interpreta um número falado (em algarismos ou por extenso) como inteiro,
+// ou retorna null se o texto não for um número reconhecível
+function parseSpokenNumber(text){
+  const trimmed = (text||'').trim();
+  if(!trimmed) return null;
+  if(/^\d{1,3}$/.test(trimmed)) return parseInt(trimmed, 10);
+  const words = trimmed.split(/\s+/).filter(w => w && w!=='e');
+  if(words.length===0 || words.length>4) return null; // códigos são curtos (até "cento e vinte e oito")
+  let total = 0;
+  for(const w of words){
+    if(VOICE_NUMBER_WORDS[w]===undefined) return null; // alguma palavra não é numérica -> não é um código
+    total += VOICE_NUMBER_WORDS[w];
+  }
+  return total;
+}
+
+// converte um código (ex.: 71) no time/jogador/ação correspondentes,
+// segundo a tabela posição*10+ação; retorna null se o código não existir
+// (fora da faixa, ação inválida, ou jogador inexistente naquela posição)
+function decodeVoiceCode(num){
+  if(num===null || num<11 || num>128) return null;
+  const actionDigit = num % 10;
+  const position = Math.floor(num/10);
+  if(position<1 || position>12) return null;
+  const actionKey = VOICE_CODE_ACTION_MAP[actionDigit];
+  if(!actionKey) return null;
+  const team = position<=6 ? 'A' : 'B';
+  const idx = position<=6 ? position-1 : position-7;
+  const teamObj = slotTeam(team);
+  const player = teamObj && teamObj.players[idx];
+  if(!player) return null;
+  return {team, player, actionKey};
+}
+
+// tenta tratar a fala inteira como um código numérico; retorna true se
+// tratou (marcou a ação ou avisou erro), false se não era um código
+function tryVoiceCodeCommand(rawNormText, rawText){
+  const num = parseSpokenNumber(rawNormText);
+  if(num===null) return false;
+  const decoded = decodeVoiceCode(num);
+  if(!decoded){
+    showToast('Código de voz não corresponde a nenhum jogador: "' + rawText + '"');
+    speak('Código não reconhecido.');
+    return true;
+  }
+  applyAction(decoded.team, decoded.player, decoded.actionKey);
+  return true;
+}
+
 // quando o comando de voz tem 2 ou mais palavras, a PRIMEIRA palavra é
 // entendida pelo prefixo com que começa (cobre qualquer variação de
 // transcrição que comece assim, mesmo que não esteja na lista de sinônimos):
@@ -3175,7 +3305,13 @@ function speakLastMarkingCommand(){
 }
 
 function processVoiceCommand(rawText){
-  const text = applyVoiceSynonyms(applyFirstWordPrefix(normalizeVoiceText(rawText)));
+  const rawNorm = normalizeVoiceText(rawText).trim();
+
+  // comando por código numérico da tabela (ex.: "71", "onze", "cento e vinte e oito")
+  // tem prioridade e é checado antes de qualquer outra interpretação
+  if(tryVoiceCodeCommand(rawNorm, rawText)) return;
+
+  const text = applyVoiceSynonyms(applyFirstWordPrefix(rawNorm));
 
   // comandos informativos — funcionam em qualquer posição da fala,
   // não dependem de começar com uma palavra-gatilho de ação
