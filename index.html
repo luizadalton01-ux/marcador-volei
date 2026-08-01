@@ -824,8 +824,11 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.75.0";
+const APP_VERSION = "3.76.0";
 const CHANGELOG = [
+  { version:"3.76.0", date:"01/08/2026", changes:[
+    "Adicionadas duas novas combinações de comando de voz: \"nome do jogador + código da ação\" (ex.: \"João 1\") e \"código da ação + nome do jogador\" (ex.: \"1 João\"). O código vai de 1 a 8 (1=ataque, 2=pingada, 3=bloqueio, 4=ace, 5=ataque errado, 6=saque errado, 7=passe errado, 8=infração) — o mesmo dígito de ação já usado no código numérico da tabela jogador×ação. Documentado no guia de ajuda (❓)."
+  ]},
   { version:"3.75.0", date:"01/08/2026", changes:[
     "Adicionada borda branca no card do jogador que efetuou o último ponto, igual à borda amarela já existente para quem está sacando. Se o mesmo jogador estiver sacando e também tiver feito o último ponto, o card mostra as duas bordas juntas (amarela por fora, branca por dentro)."
   ]},
@@ -1345,6 +1348,10 @@ const HELP_DATA = [
   { id:"codigo", icon:"🔢", title:"Comandos de voz — código numérico", items:[
     { name:"Marcar por código", tag:"atalho rápido", tagCls:"good", say:"[código]",
       variants:"Fale só o número do código, em algarismos (\"setenta e um\") ou por extenso (\"71\") — o app marca a ação do jogador correspondente na hora, sem precisar dizer o nome." },
+    { name:"Nome + dígito da ação", tag:"atalho rápido", tagCls:"good", say:"[nome] [1 a 8]",
+      variants:"\"João 1\", \"Maria 4\" — diga o nome do jogador seguido do dígito da ação (1 a 8, veja a tabela abaixo). Não usa o código de posição, só o dígito da ação." },
+    { name:"Dígito da ação + nome", tag:"atalho rápido", tagCls:"good", say:"[1 a 8] [nome]",
+      variants:"\"1 João\", \"4 Maria\" — mesma coisa, mas com o dígito da ação antes do nome." },
   ], table:`
     <table class="help-cmd-table">
       <thead><tr><th>Código</th><th>Como calcular</th></tr></thead>
@@ -3188,6 +3195,51 @@ function tryVoiceCodeCommand(rawNormText, rawText){
   return true;
 }
 
+// interpreta uma palavra como o dígito de uma ação (1 a 8, em algarismo ou
+// por extenso — reaproveita VOICE_NUMBER_WORDS); retorna null se não for
+function parseActionDigitToken(word){
+  if(/^[1-8]$/.test(word)) return parseInt(word, 10);
+  const val = VOICE_NUMBER_WORDS[word];
+  if(val!==undefined && val>=1 && val<=8) return val;
+  return null;
+}
+
+// reconhece as combinações "nome do jogador + código da ação" (ex.: "joao 1")
+// e "código da ação + nome do jogador" (ex.: "1 joao"), onde o código é o
+// mesmo dígito de ação (1 a 8) da tabela: 1=ataque, 2=pingada, 3=bloqueio,
+// 4=ace, 5=ataque errado, 6=saque errado, 7=passe errado, 8=infração.
+// Retorna true se reconheceu o padrão (marcou a ação ou avisou erro do
+// jogador), false se a fala não tem essa forma (código só na ponta).
+function tryVoiceNameCodeCommand(text, rawText){
+  const words = text.split(/\s+/).filter(Boolean);
+  if(words.length < 2) return false;
+
+  const firstDigit = parseActionDigitToken(words[0]);
+  const lastDigit = parseActionDigitToken(words[words.length-1]);
+
+  let actionDigit, nameWords;
+  if(firstDigit!==null){
+    actionDigit = firstDigit;
+    nameWords = words.slice(1);
+  } else if(lastDigit!==null){
+    actionDigit = lastDigit;
+    nameWords = words.slice(0, -1);
+  } else {
+    return false;
+  }
+  if(nameWords.length===0) return false;
+
+  const actionKey = VOICE_CODE_ACTION_MAP[actionDigit];
+  const found = findPlayerByVoiceName(nameWords.join(' '));
+  if(!found){
+    showToast('Não entendi o jogador em: "' + rawText + '"');
+    speak('Não entendi o jogador.');
+    return true;
+  }
+  applyAction(found.team, found.player, actionKey);
+  return true;
+}
+
 // quando o comando de voz tem 2 ou mais palavras, a PRIMEIRA palavra é
 // entendida pelo prefixo com que começa (cobre qualquer variação de
 // transcrição que comece assim, mesmo que não esteja na lista de sinônimos):
@@ -3332,9 +3384,18 @@ function processVoiceCommand(rawText){
     return;
   }
 
-  // ignora silenciosamente falas que não começam com uma palavra de comando
-  // reconhecida (conversas de fundo, ruído etc. não geram aviso nenhum)
-  if(!startsWithVoiceTrigger(text)) return;
+  // combinações "nome + código" / "código + nome" (ex.: "joao 1", "1 joao")
+  // não dependem de começar com uma palavra-gatilho de ação, então são a
+  // alternativa quando a fala não bate com nenhum comando por palavra —
+  // checadas ANTES de ignorar silenciosamente, mas DEPOIS de garantir que
+  // não é um comando por palavra-gatilho normal (ex.: "ponto direto time 1",
+  // cujo nome de time termina em dígito e não pode ser confundido com código)
+  if(!startsWithVoiceTrigger(text)){
+    if(tryVoiceNameCodeCommand(text, rawText)) return;
+    // ignora silenciosamente falas que não começam com uma palavra de comando
+    // reconhecida (conversas de fundo, ruído etc. não geram aviso nenhum)
+    return;
+  }
 
   // "desfazer"
   if(text.startsWith('desfazer') || levenshteinDistance(text.split(/\s+/)[0]||'', 'desfazer') <= 2){
