@@ -824,8 +824,11 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.76.0";
+const APP_VERSION = "3.77.0";
 const CHANGELOG = [
+  { version:"3.77.0", date:"01/08/2026", changes:[
+    "Adicionadas duas novas combinações de comando de voz com código de posição por letra: \"código de posição + dígito da ação\" (ex.: \"1A 1\") e \"dígito da ação + código de posição\" (ex.: \"1 1A\"). Código de posição: 1A-6A = jogadores do Time 1 (na ordem do elenco), 1B-6B = jogadores do Time 2. Dígito da ação: 1=ataque, 2=pingada, 3=bloqueio, 4=ace, 5=ataque errado, 6=saque errado, 7=passe errado, 8=infração. Documentado no guia de ajuda (❓)."
+  ]},
   { version:"3.76.0", date:"01/08/2026", changes:[
     "Adicionadas duas novas combinações de comando de voz: \"nome do jogador + código da ação\" (ex.: \"João 1\") e \"código da ação + nome do jogador\" (ex.: \"1 João\"). O código vai de 1 a 8 (1=ataque, 2=pingada, 3=bloqueio, 4=ace, 5=ataque errado, 6=saque errado, 7=passe errado, 8=infração) — o mesmo dígito de ação já usado no código numérico da tabela jogador×ação. Documentado no guia de ajuda (❓)."
   ]},
@@ -1352,6 +1355,10 @@ const HELP_DATA = [
       variants:"\"João 1\", \"Maria 4\" — diga o nome do jogador seguido do dígito da ação (1 a 8, veja a tabela abaixo). Não usa o código de posição, só o dígito da ação." },
     { name:"Dígito da ação + nome", tag:"atalho rápido", tagCls:"good", say:"[1 a 8] [nome]",
       variants:"\"1 João\", \"4 Maria\" — mesma coisa, mas com o dígito da ação antes do nome." },
+    { name:"Código de posição + dígito da ação", tag:"atalho rápido", tagCls:"good", say:"[posição] [1 a 8]",
+      variants:"\"1A 1\", \"6B 8\" — código de posição (1A-6A = jogadores do Time 1 na ordem do elenco, 1B-6B = Time 2) seguido do dígito da ação (1 a 8)." },
+    { name:"Dígito da ação + código de posição", tag:"atalho rápido", tagCls:"good", say:"[1 a 8] [posição]",
+      variants:"\"1 1A\", \"8 6B\" — mesma coisa, mas com o dígito da ação antes do código de posição." },
   ], table:`
     <table class="help-cmd-table">
       <thead><tr><th>Código</th><th>Como calcular</th></tr></thead>
@@ -1360,6 +1367,7 @@ const HELP_DATA = [
         <tr><td class="help-cmd-acao">Posição do jogador</td><td class="help-cmd-lista">1 a 6 = jogadores do Time 1, na ordem do elenco · 7 a 12 = jogadores do Time 2, na ordem do elenco</td></tr>
         <tr><td class="help-cmd-acao">Dígito da ação</td><td class="help-cmd-lista"><code>1 ataque</code><code>2 pingada</code><code>3 bloqueio</code><code>4 ace</code><code>5 ataque errado</code><code>6 saque errado</code><code>7 passe errado</code><code>8 infração</code></td></tr>
         <tr><td class="help-cmd-acao">Exemplos</td><td class="help-cmd-lista"><code>11 = jogador 1, ataque</code><code>24 = jogador 2, ace</code><code>71 = jogador 7, ataque</code><code>128 = jogador 12, infração</code></td></tr>
+        <tr><td class="help-cmd-acao">Posição por letra do time</td><td class="help-cmd-lista">Alternativa ao código de posição 1-12: <code>1A a 6A</code> = jogadores do Time 1 · <code>1B a 6B</code> = jogadores do Time 2, combinada com o dígito da ação em vez de multiplicar por 10. Ex.: <code>1A 1</code> ou <code>1 1A</code> = jogador 1 do Time 1, ataque · <code>6B 8</code> ou <code>8 6B</code> = jogador 6 do Time 2, infração.</td></tr>
       </tbody>
     </table>
   `, note:"💡 Essa é a mesma numeração da planilha de códigos (jogador × ação). Se o código falado não corresponder a nenhum jogador existente no time (ex.: time com menos de 6 jogadores), o app avisa \"Código não reconhecido\" em vez de marcar." },
@@ -3195,6 +3203,51 @@ function tryVoiceCodeCommand(rawNormText, rawText){
   return true;
 }
 
+// interpreta um token como código de posição do jogador: 1A-6A = time 1
+// (na ordem do elenco), 1B-6B = time 2. Retorna {team, idx} ou null.
+function parsePositionCodeToken(token){
+  const m = /^([1-6])([ab])$/.exec(token);
+  if(!m) return null;
+  return { team: m[2]==='a' ? 'A' : 'B', idx: parseInt(m[1],10)-1 };
+}
+
+// reconhece as combinações "código de posição + código da ação" (ex.: "1a 1")
+// e "código da ação + código de posição" (ex.: "1 1a"). Diferente do código
+// numérico (posição*10+ação), aqui a posição usa a letra do time (A/B) em vez
+// de ir de 1 a 12, então os dois formatos não se confundem. Retorna true se
+// reconheceu o padrão (marcou a ação ou avisou erro), false caso contrário.
+function tryVoicePositionCodeCommand(rawNormText, rawText){
+  // junta "1 a" / "6 b" (número e letra falados com pausa) num token só, "1a"/"6b"
+  const merged = rawNormText.replace(/\b([1-6])\s+([ab])\b/g, '$1$2');
+  const words = merged.trim().split(/\s+/).filter(Boolean);
+  if(words.length !== 2) return false;
+
+  const pos0 = parsePositionCodeToken(words[0]);
+  const pos1 = parsePositionCodeToken(words[1]);
+  let posInfo, actionDigit;
+  if(pos0 && !pos1){
+    posInfo = pos0;
+    actionDigit = parseActionDigitToken(words[1]);
+  } else if(pos1 && !pos0){
+    posInfo = pos1;
+    actionDigit = parseActionDigitToken(words[0]);
+  } else {
+    return false;
+  }
+  if(actionDigit===null) return false;
+
+  const actionKey = VOICE_CODE_ACTION_MAP[actionDigit];
+  const teamObj = slotTeam(posInfo.team);
+  const player = teamObj && teamObj.players[posInfo.idx];
+  if(!player){
+    showToast('Código de voz não corresponde a nenhum jogador: "' + rawText + '"');
+    speak('Código não reconhecido.');
+    return true;
+  }
+  applyAction(posInfo.team, player, actionKey);
+  return true;
+}
+
 // interpreta uma palavra como o dígito de uma ação (1 a 8, em algarismo ou
 // por extenso — reaproveita VOICE_NUMBER_WORDS); retorna null se não for
 function parseActionDigitToken(word){
@@ -3370,6 +3423,9 @@ function processVoiceCommand(rawText){
   // comando por código numérico da tabela (ex.: "71", "onze", "cento e vinte e oito")
   // tem prioridade e é checado antes de qualquer outra interpretação
   if(tryVoiceCodeCommand(rawNorm, rawText)) return;
+
+  // comando por código de posição + ação (ex.: "1a 1" ou "1 1a")
+  if(tryVoicePositionCodeCommand(rawNorm, rawText)) return;
 
   const text = applyVoiceSynonyms(applyFirstWordPrefix(rawNorm));
 
