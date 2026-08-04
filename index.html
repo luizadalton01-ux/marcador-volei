@@ -396,6 +396,20 @@ label.field-label{display:block; font-size:11px; text-transform:uppercase; lette
 .team-col.a .pos-badge{background:var(--teamA);}
 .team-col.b .pos-badge{background:var(--teamB);}
 .player-name{flex:1; min-width:0; font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+/* Edição de posição e nome direto na aba de marcação — mesmo molde, mesmas
+   regras da caixa de posição e do campo de nome da aba Times (ver
+   renderRosterFor / .ppos-select / .pname-input). Reaproveita as classes
+   .pos-badge e .player-name (tamanho, cor por time, modo paisagem) e só
+   ajusta o necessário para virarem um <select> e um <input> editáveis. */
+.player-info select.pos-badge{
+  cursor:pointer; border:none; -webkit-appearance:none; appearance:none;
+  text-align:center; text-align-last:center; padding:0 2px;
+}
+.player-info input.player-name{
+  border:1px solid var(--line); background:var(--bg-elev-2); border-radius:6px;
+  padding:2px 6px; height:22px;
+}
+.player-info input.player-name:focus{border-color:var(--muted-2);}
 .player-pts{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted-2); flex-shrink:0;}
 .player-serves{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted-2); flex-shrink:0;}
 .serve-player-icon{margin-right:2px;}
@@ -598,7 +612,9 @@ table.stats-table tr:last-child td{border-bottom:none;}
   .player-info{flex-shrink:0; width:auto; max-width:38%;}
   .serving-tag{font-size:8px; padding:1px 4px;}
   .pos-badge{width:22px; height:19px; font-size:9.5px; border-radius:6px;}
+  select.pos-badge{width:30px;}
   .player-name{font-size:18px; max-width:150px;}
+  input.player-name{height:26px;}
   .player-pts{font-size:10.5px;}
   .player-serves{font-size:10.5px;}
   .mini-action-grid{grid-template-columns:repeat(9,1fr); gap:1px; flex:1;}
@@ -2227,11 +2243,53 @@ function totalPointsFor(p){
 function renderCourt(){
   const pa = $('#playersA'), pb = $('#playersB');
   pa.innerHTML=''; pb.innerHTML='';
-  slotTeam('A').players.forEach(p=> pa.appendChild(playerCard(p,'A')));
-  slotTeam('B').players.forEach(p=> pb.appendChild(playerCard(p,'B')));
+  slotTeam('A').players.forEach((p,idx)=> pa.appendChild(playerCard(p,'A',idx)));
+  slotTeam('B').players.forEach((p,idx)=> pb.appendChild(playerCard(p,'B',idx)));
+  bindCourtPlayerEditors();
 }
 
-function playerCard(p, team){
+/* Nome e posição editáveis direto no card da quadra — mesmo molde, mesmas
+   funções e regras da caixa de posição/nome do elenco na aba Times (ver
+   renderRosterFor): entre os 6 primeiros jogadores do time, a posição não
+   pode se repetir (trocando com quem já estiver na posição escolhida); a
+   partir do 7º jogador (ou com a posição extra "AT", quando o time tem
+   menos de 6 jogadores no rodízio) a posição pode ser repetida livremente.
+   As posições continuam sempre reordenadas como LE, P1, CE, OP, P2, LI. */
+function bindCourtPlayerEditors(){
+  $$('.court-name-input').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const teamObj = slotTeam(e.target.dataset.team);
+      const player = teamObj && teamObj.players[+e.target.dataset.idx];
+      if(!player) return;
+      player.name = e.target.value;
+      markDirty();
+      renderScoreboard(); // atualiza o nome do sacador no cabeçalho da coluna, sem redesenhar a quadra
+    });
+  });
+  $$('.court-pos-select').forEach(sel=>{
+    sel.addEventListener('change', e=>{
+      const teamId = e.target.dataset.team;
+      const idx = +e.target.dataset.idx;
+      const teamObj = slotTeam(teamId);
+      const player = teamObj && teamObj.players[idx];
+      if(!player) return;
+      const oldPos = player.pos;
+      const newPos = e.target.value;
+      if(idx < 6 && newPos && !EXTRA_POSITIONS.includes(newPos)){
+        // se outro dos 6 primeiros já está nessa posição, os dois trocam:
+        // ele passa a usar a posição que este jogador tinha antes.
+        const conflict = teamObj.players.slice(0,6).find((pl, i2)=> i2!==idx && pl.pos===newPos);
+        if(conflict) conflict.pos = oldPos;
+      }
+      player.pos = newPos;
+      teamObj.players = reorderFirstSixByPosition(teamObj.players);
+      markDirty();
+      renderAll(); // reordena e atualiza a quadra após a troca
+    });
+  });
+}
+
+function playerCard(p, team, idx){
   const card = document.createElement('div');
   const isServing = state.servingPlayerId === p.id;
   const isLastScorer = state.lastScorerPlayerId === p.id;
@@ -2257,11 +2315,22 @@ function playerCard(p, team){
     ? `<div class="card-corner-markers ${cornerCls}">${serveFigurine}${lastPointDot}</div>`
     : '';
 
+  const teamObj = slotTeam(team);
+  const allowExtraPositions = (teamObj.playerCount || 6) < 6;
+  const posOptions = allowExtraPositions ? POSITIONS.concat(EXTRA_POSITIONS) : POSITIONS;
+  const emptyPosOption = idx < 6 ? `<option value="" ${p.pos?'':'selected'}>—</option>` : '';
+  const posSelect = `
+    <select class="pos-badge court-pos-select" data-team="${team}" data-idx="${idx}">
+      ${emptyPosOption}
+      ${posOptions.map(pos=>`<option value="${pos}" ${pos===p.pos?'selected':''}>${pos}</option>`).join('')}
+    </select>`;
+  const nameInput = `<input type="text" maxlength="16" class="player-name court-name-input" data-team="${team}" data-idx="${idx}" value="${escapeHtml(p.name)}">`;
+
   card.innerHTML = `
     ${cornerMarkers}
     <div class="player-info">
-      <div class="pos-badge">${p.pos}</div>
-      <div class="player-name">${escapeHtml(p.name)}</div>
+      ${posSelect}
+      ${nameInput}
       ${isServing ? '<span class="serving-tag">'+servingLabel+'</span>' : ''}
       <div class="player-serves"><span class="serve-player-icon" title="Saque">🤾</span>${p.stats.saqueCerto}</div>
       <div class="player-pts">🏐${totalPointsFor(p)}pt</div>
