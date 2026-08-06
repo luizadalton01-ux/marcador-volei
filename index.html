@@ -417,9 +417,14 @@ label.field-label{display:block; font-size:11px; text-transform:uppercase; lette
 
 .player-card.is-serving{border-color:rgba(244,199,68,0.55); box-shadow:0 0 0 1px rgba(244,199,68,0.35) inset;}
 .player-card.is-last-scorer{border-color:rgba(255,255,255,0.55); box-shadow:0 0 0 1px rgba(255,255,255,0.35) inset;}
+.player-card.is-last-error{border-color:rgba(224,90,90,0.6); box-shadow:0 0 0 1px rgba(224,90,90,0.4) inset;}
 .player-card.is-serving.is-last-scorer{
   border-color:rgba(244,199,68,0.55);
   box-shadow:0 0 0 1px rgba(244,199,68,0.35) inset, 0 0 0 3px rgba(255,255,255,0.35) inset;
+}
+.player-card.is-serving.is-last-error{
+  border-color:rgba(244,199,68,0.55);
+  box-shadow:0 0 0 1px rgba(244,199,68,0.35) inset, 0 0 0 3px rgba(224,90,90,0.4) inset;
 }
 .serving-tag{
   font-size:9.5px; font-weight:800; color:#0c0904; background:#f4c744;
@@ -851,8 +856,11 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.77.1";
+const APP_VERSION = "3.78.0";
 const CHANGELOG = [
+  { version:"3.78.0", date:"05/08/2026", changes:[
+    "O card do jogador que cometeu o último erro (ataque errado, saque errado, passe errado ou infração) agora também ganha um contorno vermelho, do mesmo jeito que já acontecia com quem está sacando (contorno dourado) e com quem fez o último ponto certo (contorno branco). Antes só a bolinha \"ER\" no canto do card indicava o último erro, sem contorno."
+  ]},
   { version:"3.77.1", date:"05/08/2026", changes:[
     "Corrigido, na planilha exportada (.xls): o \"0\" das duas linhas em branco após cada jogador na posição Líbero (LI) estava sendo gravado como texto e não era reconhecido como número pelo Excel. Agora é gravado como valor numérico."
   ]},
@@ -2416,7 +2424,7 @@ function playerCard(p, team, idx){
   const isServing = state.servingPlayerId === p.id;
   const isLastScorer = state.lastScorerPlayerId === p.id;
   const isLastError = state.lastErrorPlayerId === p.id;
-  card.className = 'player-card' + (isServing ? ' is-serving' : '') + (isLastScorer ? ' is-last-scorer' : '');
+  card.className = 'player-card' + (isServing ? ' is-serving' : '') + (isLastScorer ? ' is-last-scorer' : '') + (isLastError ? ' is-last-error' : '');
   const actionBtns = ACTIONS.map(a=>
     `<button class="mini-action ${a.cls}" data-team="${team}" data-player="${p.id}" data-action="${a.key}">${a.short}</button>`
   ).join('');
