@@ -410,7 +410,8 @@ label.field-label{display:block; font-size:11px; text-transform:uppercase; lette
   padding:2px 6px; height:22px;
 }
 .player-info input.player-name:focus{border-color:var(--muted-2);}
-.player-pts{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted-2); flex-shrink:0;}
+.player-pts{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted-2); flex-shrink:0; display:flex; align-items:center; gap:4px;}
+.player-total-pts{opacity:0.7; padding-left:4px; border-left:1px solid var(--line);}
 .player-serves{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--muted-2); flex-shrink:0;}
 .serve-player-icon{margin-right:2px;}
 
@@ -451,9 +452,17 @@ label.field-label{display:block; font-size:11px; text-transform:uppercase; lette
   font-size:28px; line-height:1;
   filter: drop-shadow(0 1px 3px rgba(0,0,0,0.55));
 }
-/* bolinha de "sacando": mesma figurinha de vôlei, tingida de amarelo */
+/* bolinha de "sacando": mesma figurinha de vôlei, tingida de branco */
 .corner-marker-icon.serve-ball{
-  filter: sepia(1) saturate(8) hue-rotate(-8deg) brightness(1.05) drop-shadow(0 1px 3px rgba(0,0,0,0.55));
+  filter: grayscale(1) brightness(1.6) drop-shadow(0 1px 3px rgba(0,0,0,0.55));
+}
+/* bolinha de "último ponto certo": tingida de azul (tom mais escuro) */
+.corner-marker-icon.point-ball{
+  filter: sepia(1) saturate(7) hue-rotate(180deg) brightness(0.65) drop-shadow(0 1px 3px rgba(0,0,0,0.55));
+}
+/* bolinha de "último erro": tingida de vermelho (tom mais escuro) */
+.corner-marker-icon.error-ball{
+  filter: sepia(1) saturate(9) hue-rotate(-50deg) brightness(0.6) drop-shadow(0 1px 3px rgba(0,0,0,0.55));
 }
 
 /* Modo de expansão: ativado pela régua de altura, faz os quadrinhos dos
@@ -540,6 +549,7 @@ table.stats-table tr:last-child td{border-bottom:none;}
 .bar-btn.undo{background:var(--bad-dim); border-color:rgba(229,86,106,0.45); color:var(--bad);}
 .bar-btn.redo{background:rgba(244,199,68,0.16); border-color:rgba(244,199,68,0.5); color:#f4c744;}
 .bar-btn.primary{background:var(--good-dim); border-color:rgba(55,201,138,0.4); color:var(--good);}
+select.bar-btn{-webkit-appearance:none; appearance:none; text-align:center; text-align-last:center; cursor:pointer;}
 .bar-btn:active{transform:scale(0.97);}
 .bar-btn:disabled{opacity:0.35;}
 
@@ -736,6 +746,7 @@ table.stats-table tr:last-child td{border-bottom:none;}
       <div class="bottombar" id="bottomBar">
         <button class="bar-btn undo" id="btnUndo">↩︎ Desfazer</button>
         <button class="bar-btn redo" id="btnRedo">↪︎ Refazer</button>
+        <select class="bar-btn" id="setSwitcher" title="Visitar outro set"></select>
         <button class="bar-btn primary" id="btnEndSet">Próximo set</button>
       </div>
     </div>
@@ -826,7 +837,7 @@ const ACTIONS = [
   {key:"ataqueCerto",  title:"Ataque",   sub:"+1 ponto",    cls:"good", pt:1,  short:"Atq✓"},
   {key:"pingada",      title:"Pingada",        sub:"+1 ponto",    cls:"good", pt:1,  short:"Png"},
   {key:"bloqueio",     title:"Bloqueio",       sub:"+1 ponto",    cls:"good", pt:1,  short:"Blq"},
-  {key:"ace",          title:"Ace",            sub:"+1 ponto",    cls:"good", pt:1,  short:"Ace"},
+  {key:"ace",          title:"Ace",            sub:"+1 ponto",    cls:"good", pt:1,  short:"Ace", speakTitle:"Eici"},
   {key:"ataqueErrado", title:"Ataque errado",  sub:"ponto adversário", cls:"bad", pt:-1, short:"Atq✗"},
   {key:"saqueErrado",  title:"Saque errado",   sub:"ponto adversário", cls:"bad", pt:-1, short:"Sq✗"},
   {key:"passeErrado",  title:"Passe errado",   sub:"ponto adversário", cls:"bad", pt:-1, short:"Ps✗"},
@@ -840,8 +851,18 @@ const MAX_TEAMS = 8;
 /* ---------------- app version / changelog ----------------
    Toda vez que o app for modificado, adiciona uma nova entrada
    no topo deste array com a versão e a data da alteração. */
-const APP_VERSION = "3.76.0";
+const APP_VERSION = "3.77.1";
 const CHANGELOG = [
+  { version:"3.77.1", date:"05/08/2026", changes:[
+    "Corrigido, na planilha exportada (.xls): o \"0\" das duas linhas em branco após cada jogador na posição Líbero (LI) estava sendo gravado como texto e não era reconhecido como número pelo Excel. Agora é gravado como valor numérico."
+  ]},
+  { version:"3.77.0", date:"05/08/2026", changes:[
+    "Alterados os códigos dos comandos de voz \"nome + código\"/\"código + nome\" para os erros: ataque errado passou do código 5 para 10, saque errado do 6 para 20, passe errado do 7 para 30 e infração do 8 para 40 (os códigos 1=ataque, 2=pingada, 3=bloqueio e 4=ace continuam iguais). Não afeta o comando por código numérico posição×10+ação, que continua usando 5/6/7/8 normalmente.",
+    "A narração por voz do \"Ace\" agora fala \"Eici\" em vez de \"Ace\" ao marcar a ação (o nome exibido na tela continua \"Ace\")."
+  ]},
+  { version:"3.76.1", date:"05/08/2026", changes:[
+    "Adicionado um espaço entre \"Tt\" e o número no badge de pontos do card do jogador (aba de marcação), para não ficar colado."
+  ]},
   { version:"3.76.0", date:"01/08/2026", changes:[
     "Adicionadas duas novas combinações de comando de voz: \"nome do jogador + código da ação\" (ex.: \"João 1\") e \"código da ação + nome do jogador\" (ex.: \"1 João\"). O código vai de 1 a 8 (1=ataque, 2=pingada, 3=bloqueio, 4=ace, 5=ataque errado, 6=saque errado, 7=passe errado, 8=infração) — o mesmo dígito de ação já usado no código numérico da tabela jogador×ação. Documentado no guia de ajuda (❓)."
   ]},
@@ -1364,10 +1385,10 @@ const HELP_DATA = [
   { id:"codigo", icon:"🔢", title:"Comandos de voz — código numérico", items:[
     { name:"Marcar por código", tag:"atalho rápido", tagCls:"good", say:"[código]",
       variants:"Fale só o número do código, em algarismos (\"setenta e um\") ou por extenso (\"71\") — o app marca a ação do jogador correspondente na hora, sem precisar dizer o nome." },
-    { name:"Nome + dígito da ação", tag:"atalho rápido", tagCls:"good", say:"[nome] [1 a 8]",
-      variants:"\"João 1\", \"Maria 4\" — diga o nome do jogador seguido do dígito da ação (1 a 8, veja a tabela abaixo). Não usa o código de posição, só o dígito da ação." },
-    { name:"Dígito da ação + nome", tag:"atalho rápido", tagCls:"good", say:"[1 a 8] [nome]",
-      variants:"\"1 João\", \"4 Maria\" — mesma coisa, mas com o dígito da ação antes do nome." },
+    { name:"Nome + código da ação", tag:"atalho rápido", tagCls:"good", say:"[nome] [código]",
+      variants:"\"João 1\", \"Maria 40\" — diga o nome do jogador seguido do código da ação: 1 ataque, 2 pingada, 3 bloqueio, 4 ace, 10 ataque errado, 20 saque errado, 30 passe errado, 40 infração. Não usa o código de posição." },
+    { name:"Código da ação + nome", tag:"atalho rápido", tagCls:"good", say:"[código] [nome]",
+      variants:"\"1 João\", \"40 Maria\" — mesma coisa, mas com o código da ação antes do nome." },
   ], table:`
     <table class="help-cmd-table">
       <thead><tr><th>Código</th><th>Como calcular</th></tr></thead>
@@ -1560,6 +1581,7 @@ function autoAssignFirstServe(){
   state.serve = startingTeam;
   state.errorMessage = null;
   state.lastScorerPlayerId = null; // não faz sentido carregar o último ponto do set anterior
+  state.lastErrorPlayerId = null; // idem, para o último erro
   if(player){
     state.servingPlayerId = player.id;
     player.stats.saqueCerto += 1;
@@ -1689,6 +1711,7 @@ function defaultState(){
     serve: null, // indefinido até o início da partida/set definir quem saca primeiro
     servingPlayerId: null, // jogador marcado como sacando (indicação visual)
     lastScorerPlayerId: null, // jogador que efetuou o último ponto marcado (indicação visual)
+    lastErrorPlayerId: null, // jogador que cometeu o último erro marcado (indicação visual)
     serveConfirmed: false, // true depois que o saque desta jogada foi marcado (botão Saq)
     errorMessage: null,    // erro de marcação (saque esquecido/errado) — some só quando corrigido
     rotationIndexA: 0,      // posição atual do rodízio do time A (índice em POSITIONS)
@@ -1728,9 +1751,20 @@ function updateSaveIndicator(){
 }
 
 let setArchive = []; // histórico de SETS encerrados (a partida em si é infinita — só os sets se encerram e trocam)
+/* setSnapshots: cada set (fechado ou o "ao vivo") tem seu próprio clone
+   COMPLETO do state (placar, saque, rodízio, histórico até ali) guardado
+   aqui, indexado pelo número do set — é o que permite abrir qualquer set
+   já fechado pela caixa de seleção, editar o que for preciso nele, e depois
+   voltar pro set em andamento sem perder nada de nenhum dos dois lados.
+   liveSetNum é o número do set que está realmente em andamento agora (o
+   mais novo, ainda não fechado) — usado para saber quando "Próximo set"
+   pode ficar habilitado e para rotular a opção certa na caixa de seleção. */
+let setSnapshots = {};
+let liveSetNum = 1;
+let undoRedoBySet = {}; // cada set (fechado ou em andamento) tem sua própria pilha de desfazer/refazer, guardada aqui por número do set — assim os botões "Desfazer"/"Refazer" continuam funcionando normalmente ao visitar um set encerrado pela caixa de seleção
 
 async function saveState(){
-  const payload = JSON.stringify({ match: state, sets: setArchive });
+  const payload = JSON.stringify({ match: state, sets: setArchive, setSnapshots: setSnapshots, liveSetNum: liveSetNum });
   for(let attempt=0; attempt<2; attempt++){
     try{
       const result = await cloudStorage.set('volei_match_current', payload);
@@ -1760,13 +1794,18 @@ async function loadState(){
         if(Array.isArray(parsed.sets)) loadedArchive = parsed.sets;
         else if(Array.isArray(parsed.archive)) loadedArchive = parsed.archive;
         else loadedArchive = [];
+        setSnapshots = (parsed.setSnapshots && typeof parsed.setSnapshots==='object') ? parsed.setSnapshots : {};
+        liveSetNum = Number.isFinite(parsed.liveSetNum) ? parsed.liveSetNum : (loadedMatch.setNum || 1);
       } else {
         // formato salvo antes de existir o histórico de sets encerrados
         loadedMatch = parsed;
         loadedArchive = [];
+        setSnapshots = {};
+        liveSetNum = loadedMatch.setNum || 1;
       }
       migrateState(loadedMatch);
       setArchive = loadedArchive;
+      undoRedoBySet = {}; // pilhas de desfazer/refazer não são persistidas (igual undoStack/redoStack)
       return loadedMatch;
     }
   }catch(e){ /* not found */ }
@@ -1786,6 +1825,7 @@ function migrateState(loaded){
   }
   if(loaded.servingPlayerId === undefined) loaded.servingPlayerId = null;
   if(loaded.lastScorerPlayerId === undefined) loaded.lastScorerPlayerId = null;
+  if(loaded.lastErrorPlayerId === undefined) loaded.lastErrorPlayerId = null;
   if(loaded.serveConfirmed === undefined) loaded.serveConfirmed = false;
   if(loaded.errorMessage === undefined) loaded.errorMessage = null;
   if(loaded.rotationIndexA === undefined) loaded.rotationIndexA = loaded.rotationIndex || 0;
@@ -2056,6 +2096,10 @@ $('#btnStart').addEventListener('click', ()=>{
   state.history = [];
   undoStack = [];
   redoStack = [];
+  setSnapshots = {};
+  liveSetNum = 1;
+  setArchive = [];
+  undoRedoBySet = {};
   resetRotation();
   autoAssignFirstServe(); // define sozinho quem saca primeiro, sem precisar de toque manual
   activeTab = 'court';
@@ -2235,9 +2279,87 @@ function requestTeamSwitch(slot, teamId){
 $('#btnSwitchTeamA').addEventListener('click', ()=> openTeamSwitchSheet('A'));
 $('#btnSwitchTeamB').addEventListener('click', ()=> openTeamSwitchSheet('B'));
 
-function totalPointsFor(p){
-  const s = p.stats;
-  return (s.ataqueCerto + s.pingada + s.bloqueio + s.ace) - (s.ataqueErrado + s.saqueErrado + s.passeErrado + s.infracao);
+/* ---------------- fórmula de pontuação ponderada por posição ----------------
+   Pts = Ataque + Pingada + Ace + Bloqueio + Saque + Levantamentos
+         - Ataque errado - Saque errado - Passe errado - Infração
+
+   Pesos (aplicados conforme a posição do jogador no momento de cada ação):
+   - Ataque certo/errado, Pingada, Ace, Bloqueio: peso 1,0 para P1,P2,OP,CE,AT
+     e peso 0,1 para LE,LI.
+   - Saque certo/errado: peso 0,25 para P1,P2,OP,CE,LE,AT e peso 0,125 para LI.
+   - Levantamentos: não é uma ação marcada diretamente — é uma fração do
+     total de ataques certos do TIME (no mesmo set/período), creditada por
+     posição: 0,28 para LE; 0,23 para LI; 0,14 para P1,P2; 0,0 para OP,CE
+     (e para qualquer posição não listada, como AT ou sem posição definida).
+   - Infração e Passe errado: peso 1,0 para todas as posições. */
+function attackActionWeight(pos){
+  return (pos==='LE' || pos==='LI') ? 0.1 : 1.0;
+}
+function serveActionWeight(pos){
+  return pos==='LI' ? 0.125 : 0.25;
+}
+function levantamentoWeight(pos){
+  if(pos==='LE') return 0.28;
+  if(pos==='LI') return 0.23;
+  if(pos==='P1' || pos==='P2') return 0.14;
+  return 0; // OP, CE, AT ou sem posição definida
+}
+/* Levantamentos de um jogador: fração (por posição) do total de ataques
+   certos do time no mesmo período. */
+function levantamentosFor(pos, teamAtaqueCerto){
+  return levantamentoWeight(pos) * (teamAtaqueCerto||0);
+}
+/* Pontuação ponderada de um jogador, a partir do objeto de estatísticas dele
+   (s), da posição dele no momento das ações (pos) e do total de ataques
+   certos do TIME no mesmo período (teamAtaqueCerto), usado para calcular a
+   parcela de levantamentos. */
+function totalPointsFor(s, pos, teamAtaqueCerto){
+  s = s || {};
+  const aw = attackActionWeight(pos);
+  const sw = serveActionWeight(pos);
+  return (
+    (s.ataqueCerto||0)*aw + (s.pingada||0)*aw + (s.ace||0)*aw + (s.bloqueio||0)*aw
+    + (s.saqueCerto||0)*sw
+    + levantamentosFor(pos, teamAtaqueCerto)
+    - (s.ataqueErrado||0)*aw - (s.saqueErrado||0)*sw
+    - (s.passeErrado||0) - (s.infracao||0)
+  );
+}
+/* Formata um número ponderado (Pts ou Levantamentos) com até 2 casas
+   decimais, sem casas desnecessárias (ex.: 3 fica "3", 3.4 fica "3.4"). */
+function fmtWeighted(n){
+  const r = Math.round((n||0)*100)/100;
+  return Number.isInteger(r) ? String(r) : r.toFixed(2).replace(/0$/,'');
+}
+/* Total de ataques certos de um TIME em um set — soma direto do histórico
+   (e não do elenco atual), para não perder ataques de jogadores já
+   substituídos naquele set (mesmo raciocínio de buildSetPlayerRows). */
+function teamAttackTotalInSet(team, setNum){
+  let total = 0;
+  state.history.forEach(ev=>{
+    if(ev.set===setNum && ev.team===team && ev.actionKey==='ataqueCerto') total++;
+  });
+  return total;
+}
+/* Pontuação ponderada acumulada de um jogador (por id) em TODA a partida —
+   soma os sets já encerrados (setArchive, usando as estatísticas por
+   identidade reconstruídas em buildSetPlayerRows) mais os pontos já
+   calculados do set em andamento (currentSetPts) — usada no badge "Tt" do
+   card, ao lado do "Pt" (que mostra só o set atual). Procura em ambos os
+   lados (A/B) de cada set arquivado porque o jogador pode ter ocupado
+   slots diferentes ao longo da partida (troca de lado entre times). */
+function totalAccumulatedPointsFor(playerId, currentSetPts){
+  let total = currentSetPts || 0;
+  setArchive.forEach(setEntry=>{
+    [setEntry.teamAPlayers, setEntry.teamBPlayers].forEach(list=>{
+      if(!list) return;
+      const teamAtaqueCerto = list.reduce((sum,p)=> sum + ((p.stats && p.stats.ataqueCerto)||0), 0);
+      list.forEach(p=>{
+        if(p.playerId === playerId) total += totalPointsFor(p.stats, p.pos, teamAtaqueCerto);
+      });
+    });
+  });
+  return total;
 }
 
 function renderCourt(){
@@ -2293,26 +2415,31 @@ function playerCard(p, team, idx){
   const card = document.createElement('div');
   const isServing = state.servingPlayerId === p.id;
   const isLastScorer = state.lastScorerPlayerId === p.id;
+  const isLastError = state.lastErrorPlayerId === p.id;
   card.className = 'player-card' + (isServing ? ' is-serving' : '') + (isLastScorer ? ' is-last-scorer' : '');
   const actionBtns = ACTIONS.map(a=>
     `<button class="mini-action ${a.cls}" data-team="${team}" data-player="${p.id}" data-action="${a.key}">${a.short}</button>`
   ).join('');
   const servingLabel = state.serveConfirmed ? '🏐 Sacou' : '🏐 Sacar';
 
-  // bolinha de quem está sacando (🏐 amarela, sigla "SQ" acima) e bolinha de
-  // quem fez o último ponto (🏐 branca, sigla "PT" acima): ficam num selo no
-  // cantinho do card, por cima dos botões — no time à esquerda (A), no canto
-  // inferior direito (perto de onde fica o botão Infração); no time à
-  // direita (B), no canto superior esquerdo (perto do botão Ataque).
+  // bolinha de quem está sacando (🏐 branca, sigla "SQ" acima), bolinha de
+  // quem fez o último ponto certo (🏐 azul, sigla "PT" acima) e bolinha de
+  // quem cometeu o último erro (🏐 vermelha, sigla "ER" acima): ficam num
+  // selo no cantinho do card, por cima dos botões — no time à esquerda (A),
+  // no canto inferior direito (perto de onde fica o botão Infração); no
+  // time à direita (B), no canto superior esquerdo (perto do botão Ataque).
   const serveFigurine = isServing
     ? '<div class="corner-marker-item"><span class="corner-marker-label">SQ</span><span class="corner-marker-icon serve-ball" title="Sacando">🏐</span></div>'
     : '';
   const lastPointDot = isLastScorer
-    ? '<div class="corner-marker-item"><span class="corner-marker-label">PT</span><span class="corner-marker-icon" title="Último ponto">🏐</span></div>'
+    ? '<div class="corner-marker-item"><span class="corner-marker-label">PT</span><span class="corner-marker-icon point-ball" title="Último ponto certo">🏐</span></div>'
+    : '';
+  const lastErrorDot = isLastError
+    ? '<div class="corner-marker-item"><span class="corner-marker-label">ER</span><span class="corner-marker-icon error-ball" title="Último erro">🏐</span></div>'
     : '';
   const cornerCls = team === 'A' ? 'corner-end' : 'corner-start';
-  const cornerMarkers = (serveFigurine || lastPointDot)
-    ? `<div class="card-corner-markers ${cornerCls}">${serveFigurine}${lastPointDot}</div>`
+  const cornerMarkers = (serveFigurine || lastPointDot || lastErrorDot)
+    ? `<div class="card-corner-markers ${cornerCls}">${serveFigurine}${lastPointDot}${lastErrorDot}</div>`
     : '';
 
   const teamObj = slotTeam(team);
@@ -2326,14 +2453,25 @@ function playerCard(p, team, idx){
     </select>`;
   const nameInput = `<input type="text" maxlength="16" class="player-name court-name-input" data-team="${team}" data-idx="${idx}" value="${escapeHtml(p.name)}">`;
 
+  // O badge de saques e o badge de pontos do card mostram os números do SET
+  // ATUAL — mesma fonte (histórico filtrado pelo set) usada na aba
+  // Estatísticas e nos PDFs/planilhas exportados. Antes, esses dois badges
+  // liam p.stats direto, que acumula desde o início da partida e nunca é
+  // zerado a cada set — por isso os números do card divergiam (ficavam
+  // maiores) dos números do PDF/estatísticas a partir do 2º set.
+  const currentSetStats = statsForPlayerInCurrentSet(p.id);
+  const teamAtaqueCerto = teamAttackTotalInSet(team, state.setNum);
+  const currentPts = totalPointsFor(currentSetStats, p.pos, teamAtaqueCerto);
+  const totalPts = totalAccumulatedPointsFor(p.id, currentPts); // acumulado de TODOS os sets já jogados na partida
+
   card.innerHTML = `
     ${cornerMarkers}
     <div class="player-info">
       ${posSelect}
       ${nameInput}
       ${isServing ? '<span class="serving-tag">'+servingLabel+'</span>' : ''}
-      <div class="player-serves"><span class="serve-player-icon" title="Saque">🤾</span>${p.stats.saqueCerto}</div>
-      <div class="player-pts">🏐${totalPointsFor(p)}pt</div>
+      <div class="player-serves"><span class="serve-player-icon" title="Saque">🤾</span>${currentSetStats.saqueCerto}</div>
+      <div class="player-pts">🏐${fmtWeighted(currentPts)}pt <span class="player-total-pts" title="Total acumulado na partida">Tt ${fmtWeighted(totalPts)}</span></div>
     </div>
     <div class="mini-action-grid">
       ${actionBtns}
@@ -2353,6 +2491,46 @@ function statsForPlayerInSet(playerId, setNum){
 }
 function statsForPlayerInCurrentSet(playerId){
   return statsForPlayerInSet(playerId, state.setNum);
+}
+
+/* Monta a lista de jogadores + estatísticas de um set (por time), a partir
+   do HISTÓRICO DE AÇÕES do próprio set — não do elenco atual do time.
+   Isso evita que um jogador substituído no meio do set (ex.: campo de nome
+   editado na quadra, trocando "Adalton" por "Teste" no mesmo cartão)
+   "suma" das estatísticas e tenha seus pontos somados ao substituto: cada
+   ação do histórico já guarda o nome do jogador no momento em que ela
+   aconteceu, então agrupamos por (id do jogador + nome no momento da ação).
+   Se o nome mudar no meio do set, isso naturalmente cria dois grupos
+   diferentes — um para cada "identidade" que jogou o set — cada um só com
+   as próprias ações. Jogadores do elenco atual sem nenhuma ação nesse set
+   também entram (com tudo zerado), para não sumirem da tabela. */
+function buildSetPlayerRows(team, setNum, rosterPlayers){
+  const groups = new Map(); // chave "playerId||nome" -> {name, pos, stats, order}
+  let order = 0;
+  state.history.forEach(ev=>{
+    if(ev.set !== setNum || ev.team !== team || !ev.playerId) return;
+    const key = ev.playerId + '||' + ev.playerName;
+    if(!groups.has(key)){
+      groups.set(key, {playerId: ev.playerId, name: ev.playerName, pos: ev.pos || null, stats: emptyStats(), order: order++});
+    }
+    const g = groups.get(key);
+    if(ev.pos) g.pos = ev.pos; // guarda a posição mais recente registrada para essa identidade no set
+    if(ev.actionKey && g.stats.hasOwnProperty(ev.actionKey)) g.stats[ev.actionKey] += 1;
+  });
+
+  // jogador do elenco atual que não teve nenhuma ação registrada nesse set
+  // (ex.: entrou como reserva e o set acabou antes de ele jogar) — mantém
+  // aparecendo, com estatísticas zeradas, como já acontecia antes.
+  (rosterPlayers||[]).forEach(p=>{
+    const alreadyCovered = Array.from(groups.values()).some(g=> g.playerId===p.id && g.name===p.name);
+    if(!alreadyCovered){
+      groups.set('roster||'+p.id+'||'+p.name, {playerId:p.id, name:p.name, pos:p.pos, stats: emptyStats(), order: order++});
+    }
+  });
+
+  return Array.from(groups.values())
+    .sort((a,b)=> a.order-b.order)
+    .map(g=> ({playerId: g.playerId, name: g.name, pos: g.pos, stats: g.stats}));
 }
 
 /* ---------------- exportar dados em tabela (XLS) ---------------- */
@@ -2415,9 +2593,9 @@ function exportMatchXls(){
         const s = p.stats || {};
         statsRows.push([p.pos, p.name, s.saqueCerto||0, s.ataqueCerto||0, s.bloqueio||0, s.pingada||0, s.ataqueErrado||0, s.saqueErrado||0, s.passeErrado||0, s.infracao||0, s.ace||0, setDate, set.setNum]);
         if(p.pos === 'LI'){
-          // duas linhas em branco após cada líbero (LI), com "0" na coluna de nomes
+          // duas linhas em branco após cada líbero (LI), com 0 (numérico) na coluna de nomes
           for(let k=0; k<2; k++){
-            statsRows.push(statsHeader.map(col => col==='Nome' ? '0' : ''));
+            statsRows.push(statsHeader.map(col => col==='Nome' ? 0 : ''));
           }
         }
       });
@@ -2449,24 +2627,27 @@ function renderStats(){
     table.className = 'stats-table';
     table.innerHTML = `
       <thead><tr>
-        <th>Jogador</th><th>Atq✓</th><th>Atq✗</th><th>Blq</th><th>Png</th><th>Ace</th><th>Saq</th><th>Sq✗</th><th>Ps✗</th><th>Inf</th><th>Pts</th>
+        <th>Jogador</th><th>Pts</th><th>Atq✓</th><th>Atq✗</th><th>Blq</th><th>Png</th><th>Ace</th><th>Saq</th><th>Sq✗</th><th>Ps✗</th><th>Inf</th><th>Lev</th>
       </tr></thead>
       <tbody></tbody>
     `;
     const tbody = table.querySelector('tbody');
-    let tot = {ataqueCerto:0,ataqueErrado:0,bloqueio:0,pingada:0,ace:0,saqueCerto:0,saqueErrado:0,passeErrado:0,infracao:0, pts:0};
+    let tot = {ataqueCerto:0,ataqueErrado:0,bloqueio:0,pingada:0,ace:0,saqueCerto:0,saqueErrado:0,passeErrado:0,infracao:0, lev:0, pts:0};
+    const teamAtaqueCerto = teamAttackTotalInSet(teamKey, state.setNum);
     team.players.forEach(p=>{
       const s = statsForPlayerInCurrentSet(p.id);
-      const pts = (s.ataqueCerto + s.pingada + s.bloqueio + s.ace) - (s.ataqueErrado + s.saqueErrado + s.passeErrado + s.infracao);
-      Object.keys(tot).forEach(k=>{ if(k!=='pts') tot[k]+=s[k]||0; });
+      const lev = levantamentosFor(p.pos, teamAtaqueCerto);
+      const pts = totalPointsFor(s, p.pos, teamAtaqueCerto);
+      Object.keys(tot).forEach(k=>{ if(k!=='pts' && k!=='lev') tot[k]+=s[k]||0; });
+      tot.lev += lev;
       tot.pts += pts;
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${escapeHtml(p.name)}</td><td>${s.ataqueCerto}</td><td>${s.ataqueErrado}</td><td>${s.bloqueio}</td><td>${s.pingada}</td><td>${s.ace}</td><td>${s.saqueCerto}</td><td>${s.saqueErrado}</td><td>${s.passeErrado}</td><td>${s.infracao}</td><td>${pts}</td>`;
+      tr.innerHTML = `<td>${escapeHtml(p.name)}</td><td>${fmtWeighted(pts)}</td><td>${s.ataqueCerto}</td><td>${s.ataqueErrado}</td><td>${s.bloqueio}</td><td>${s.pingada}</td><td>${s.ace}</td><td>${s.saqueCerto}</td><td>${s.saqueErrado}</td><td>${s.passeErrado}</td><td>${s.infracao}</td><td>${fmtWeighted(lev)}</td>`;
       tbody.appendChild(tr);
     });
     const trTot = document.createElement('tr');
     trTot.className='tot-row';
-    trTot.innerHTML = `<td>Total</td><td>${tot.ataqueCerto}</td><td>${tot.ataqueErrado}</td><td>${tot.bloqueio}</td><td>${tot.pingada}</td><td>${tot.ace}</td><td>${tot.saqueCerto}</td><td>${tot.saqueErrado}</td><td>${tot.passeErrado}</td><td>${tot.infracao}</td><td>${tot.pts}</td>`;
+    trTot.innerHTML = `<td>Total</td><td>${fmtWeighted(tot.pts)}</td><td>${tot.ataqueCerto}</td><td>${tot.ataqueErrado}</td><td>${tot.bloqueio}</td><td>${tot.pingada}</td><td>${tot.ace}</td><td>${tot.saqueCerto}</td><td>${tot.saqueErrado}</td><td>${tot.passeErrado}</td><td>${tot.infracao}</td><td>${fmtWeighted(tot.lev)}</td>`;
     tbody.appendChild(trTot);
     block.appendChild(table);
     wrap.appendChild(block);
@@ -2501,8 +2682,10 @@ function renderAll(){
   renderCourt();
   renderStats();
   renderHistory();
+  renderSetSwitcher();
   $('#btnUndo').disabled = undoStack.length===0;
   $('#btnRedo').disabled = redoStack.length===0;
+  $('#btnEndSet').disabled = state.setNum !== liveSetNum;
   updateTabNavButtons();
   updateErrorBanner();
 }
@@ -2667,38 +2850,39 @@ function formatArchiveDate(iso){
 }
 
 function buildArchiveStatsTable(players){
-  let tot = {ataqueCerto:0,ataqueErrado:0,bloqueio:0,pingada:0,ace:0,saqueCerto:0,saqueErrado:0,passeErrado:0,infracao:0,pts:0};
+  const teamAtaqueCerto = players.reduce((sum,p)=> sum + ((p.stats && p.stats.ataqueCerto)||0), 0);
+  let tot = {ataqueCerto:0,ataqueErrado:0,bloqueio:0,pingada:0,ace:0,saqueCerto:0,saqueErrado:0,passeErrado:0,infracao:0,lev:0,pts:0};
   const rows = players.map(p=>{
     const s = p.stats;
-    const pts = ((s.ataqueCerto||0)+(s.pingada||0)+(s.bloqueio||0)+(s.ace||0)) - ((s.ataqueErrado||0)+(s.saqueErrado||0)+(s.passeErrado||0)+(s.infracao||0));
-    Object.keys(tot).forEach(k=>{ if(k!=='pts') tot[k]+=s[k]||0; });
+    const lev = levantamentosFor(p.pos, teamAtaqueCerto);
+    const pts = totalPointsFor(s, p.pos, teamAtaqueCerto);
+    Object.keys(tot).forEach(k=>{ if(k!=='pts' && k!=='lev') tot[k]+=s[k]||0; });
+    tot.lev += lev;
     tot.pts += pts;
-    return `<tr><td>${escapeHtml(p.name)}</td><td>${s.ataqueCerto||0}</td><td>${s.ataqueErrado||0}</td><td>${s.bloqueio||0}</td><td>${s.pingada||0}</td><td>${s.ace||0}</td><td>${s.saqueCerto||0}</td><td>${s.saqueErrado||0}</td><td>${s.passeErrado||0}</td><td>${s.infracao||0}</td><td>${pts}</td></tr>`;
+    return `<tr><td>${escapeHtml(p.name)}</td><td>${fmtWeighted(pts)}</td><td>${s.ataqueCerto||0}</td><td>${s.ataqueErrado||0}</td><td>${s.bloqueio||0}</td><td>${s.pingada||0}</td><td>${s.ace||0}</td><td>${s.saqueCerto||0}</td><td>${s.saqueErrado||0}</td><td>${s.passeErrado||0}</td><td>${s.infracao||0}</td><td>${fmtWeighted(lev)}</td></tr>`;
   }).join('');
   return `
     <table class="stats-table">
-      <thead><tr><th>Jogador</th><th>Atq✓</th><th>Atq✗</th><th>Blq</th><th>Png</th><th>Ace</th><th>Saq</th><th>Sq✗</th><th>Ps✗</th><th>Inf</th><th>Pts</th></tr></thead>
-      <tbody>${rows}<tr class="tot-row"><td>Total</td><td>${tot.ataqueCerto}</td><td>${tot.ataqueErrado}</td><td>${tot.bloqueio}</td><td>${tot.pingada}</td><td>${tot.ace}</td><td>${tot.saqueCerto}</td><td>${tot.saqueErrado}</td><td>${tot.passeErrado}</td><td>${tot.infracao}</td><td>${tot.pts}</td></tr></tbody>
+      <thead><tr><th>Jogador</th><th>Pts</th><th>Atq✓</th><th>Atq✗</th><th>Blq</th><th>Png</th><th>Ace</th><th>Saq</th><th>Sq✗</th><th>Ps✗</th><th>Inf</th><th>Lev</th></tr></thead>
+      <tbody>${rows}<tr class="tot-row"><td>Total</td><td>${fmtWeighted(tot.pts)}</td><td>${tot.ataqueCerto}</td><td>${tot.ataqueErrado}</td><td>${tot.bloqueio}</td><td>${tot.pingada}</td><td>${tot.ace}</td><td>${tot.saqueCerto}</td><td>${tot.saqueErrado}</td><td>${tot.passeErrado}</td><td>${tot.infracao}</td><td>${fmtWeighted(tot.lev)}</td></tr></tbody>
     </table>
   `;
 }
 
 function buildPdfStatsTable(players){
-  const levTotal = players.reduce((sum,p)=> sum + ((p.stats && p.stats.ataqueCerto)||0), 0);
-  let tot = {ataqueCerto:0,ataqueErrado:0,bloqueio:0,pingada:0,ace:0,saqueCerto:0,saqueErrado:0,passeErrado:0,infracao:0,lev:0,pts:0};
+  const teamAtaqueCerto = players.reduce((sum,p)=> sum + ((p.stats && p.stats.ataqueCerto)||0), 0);
+  let tot = {ataqueCerto:0,ataqueErrado:0,bloqueio:0,pingada:0,ace:0,saqueCerto:0,saqueErrado:0,passeErrado:0,infracao:0,pts:0};
   const rows = players.map(p=>{
     const s = p.stats;
-    const pts = ((s.ataqueCerto||0)+(s.pingada||0)+(s.bloqueio||0)+(s.ace||0)) - ((s.ataqueErrado||0)+(s.saqueErrado||0)+(s.passeErrado||0)+(s.infracao||0));
-    const lev = p.pos === 'LE' ? levTotal : 0;
-    Object.keys(tot).forEach(k=>{ if(k!=='pts' && k!=='lev') tot[k]+=s[k]||0; });
-    tot.lev += lev;
+    const pts = totalPointsFor(s, p.pos, teamAtaqueCerto);
+    Object.keys(tot).forEach(k=>{ if(k!=='pts') tot[k]+=s[k]||0; });
     tot.pts += pts;
-    return `<tr><td class="nm">${escapeHtml(p.name)}</td><td>${s.saqueCerto||0}</td><td>${s.ataqueCerto||0}</td><td>${s.ataqueErrado||0}</td><td>${s.bloqueio||0}</td><td>${s.pingada||0}</td><td>${s.ace||0}</td><td>${s.saqueErrado||0}</td><td>${s.passeErrado||0}</td><td>${s.infracao||0}</td><td>${lev}</td><td>${pts}</td></tr>`;
+    return `<tr><td class="nm">${escapeHtml(p.name)}</td><td>${fmtWeighted(pts)}</td><td>${s.saqueCerto||0}</td><td>${s.ataqueCerto||0}</td><td>${s.ataqueErrado||0}</td><td>${s.bloqueio||0}</td><td>${s.pingada||0}</td><td>${s.ace||0}</td><td>${s.saqueErrado||0}</td><td>${s.passeErrado||0}</td><td>${s.infracao||0}</td></tr>`;
   }).join('');
   return `
     <table class="pdf-table">
-      <thead><tr><th class="nm">Jogador</th><th>Saq</th><th>Atq✓</th><th>Atq✗</th><th>Blq</th><th>Png</th><th>Ace</th><th>Sq✗</th><th>Ps✗</th><th>Inf</th><th>Lev</th><th>Pts</th></tr></thead>
-      <tbody>${rows}<tr class="tot"><td class="nm">Total</td><td>${tot.saqueCerto}</td><td>${tot.ataqueCerto}</td><td>${tot.ataqueErrado}</td><td>${tot.bloqueio}</td><td>${tot.pingada}</td><td>${tot.ace}</td><td>${tot.saqueErrado}</td><td>${tot.passeErrado}</td><td>${tot.infracao}</td><td>${tot.lev}</td><td>${tot.pts}</td></tr></tbody>
+      <thead><tr><th class="nm">Jogador</th><th>Pts</th><th>Saq</th><th>Atq✓</th><th>Atq✗</th><th>Blq</th><th>Png</th><th>Ace</th><th>Sq✗</th><th>Ps✗</th><th>Inf</th></tr></thead>
+      <tbody>${rows}<tr class="tot"><td class="nm">Total</td><td>${fmtWeighted(tot.pts)}</td><td>${tot.saqueCerto}</td><td>${tot.ataqueCerto}</td><td>${tot.ataqueErrado}</td><td>${tot.bloqueio}</td><td>${tot.pingada}</td><td>${tot.ace}</td><td>${tot.saqueErrado}</td><td>${tot.passeErrado}</td><td>${tot.infracao}</td></tr></tbody>
     </table>
   `;
 }
@@ -2706,10 +2890,13 @@ function buildPdfStatsTable(players){
 /* Monta o quadro de totalização geral (todos os sets exportados), agrupado
    por JOGADOR: sets jogados, vitórias, derrotas, todas as ações (saque,
    ataque certo/errado, bloqueio, pingada, ace, saque errado, passe errado,
-   infração), levantamentos (soma dos ataques certos do time, creditada ao
-   jogador na posição LE em cada set), acertos, erros e %acertos — com
-   destaque de cor (azul >50%, amarelo =50%, vermelho <50%). Acertos e erros
-   da totalização NÃO incluem saques nem levantamentos. */
+   infração), levantamentos (soma dos ataques certos do time, creditada
+   inteira ao jogador na posição LE em cada set — modelo simples, só para
+   essa tabela), pontuação ponderada (Pts — ver totalPointsFor, que usa os
+   pesos por posição também para a parcela de levantamentos), acertos, erros
+   e %acertos — com destaque de cor (azul >50%, amarelo =50%, vermelho
+   <50%). Acertos e erros da totalização são contagens simples (não
+   ponderadas) e NÃO incluem saques nem levantamentos. */
 function buildPdfTotalsTable(sets){
   const players = new Map(); // nome do jogador -> acumulado
 
@@ -2718,14 +2905,14 @@ function buildPdfTotalsTable(sets){
       players.set(name, {
         sets:0, wins:0, losses:0,
         saqueCerto:0, ataqueCerto:0, ataqueErrado:0, bloqueio:0, pingada:0, ace:0,
-        saqueErrado:0, passeErrado:0, infracao:0, levantamentos:0,
+        saqueErrado:0, passeErrado:0, infracao:0, levantamentos:0, pts:0,
         acertos:0, erros:0
       });
     }
     return players.get(name);
   }
 
-  function accumulate(playerList, levTotalForTeam, won, lost){
+  function accumulate(playerList, teamAtaqueCerto, won, lost){
     (playerList||[]).forEach(p=>{
       const t = ensurePlayer(p.name);
       const s = p.stats || {};
@@ -2741,7 +2928,8 @@ function buildPdfTotalsTable(sets){
       t.saqueErrado += s.saqueErrado||0;
       t.passeErrado += s.passeErrado||0;
       t.infracao += s.infracao||0;
-      if(p.pos === 'LE') t.levantamentos += levTotalForTeam;
+      if(p.pos === 'LE') t.levantamentos += teamAtaqueCerto; // modelo anterior: tudo para o LE
+      t.pts += totalPointsFor(s, p.pos, teamAtaqueCerto);
       // acertos/erros da totalização não incluem saque nem levantamentos
       const ac = (s.ataqueCerto||0) + (s.pingada||0) + (s.bloqueio||0) + (s.ace||0);
       const er = (s.ataqueErrado||0) + (s.saqueErrado||0) + (s.passeErrado||0) + (s.infracao||0);
@@ -2759,7 +2947,9 @@ function buildPdfTotalsTable(sets){
     accumulate(s.teamBPlayers, levB, bWon, bLost);
   });
 
-  const rows = Array.from(players.entries()).map(([name, t])=>{
+  const rows = Array.from(players.entries())
+    .sort((a,b)=> a[0].localeCompare(b[0], 'pt-BR', {sensitivity:'base'}))
+    .map(([name, t])=>{
     const total = t.acertos + t.erros;
     const pct = total>0 ? (t.acertos/total*100) : 0;
     let cls = 'pct-red';
@@ -2767,6 +2957,7 @@ function buildPdfTotalsTable(sets){
     else if(pct === 50) cls = 'pct-yellow';
     return `<tr>
       <td class="nm">${escapeHtml(name)}</td>
+      <td class="lev">${fmtWeighted(t.pts)}</td>
       <td>${t.sets}</td><td>${t.wins}</td><td>${t.losses}</td>
       <td>${t.saqueCerto}</td><td>${t.ataqueCerto}</td><td>${t.ataqueErrado}</td>
       <td>${t.bloqueio}</td><td>${t.pingada}</td><td>${t.ace}</td>
@@ -2781,6 +2972,7 @@ function buildPdfTotalsTable(sets){
     <table class="pdf-totals-table">
       <thead><tr>
         <th class="nm">Jogador</th>
+        <th class="lev">Pts</th>
         <th>Sets</th><th>Vit</th><th>Der</th>
         <th>Saq</th><th>Atq✓</th><th>Atq✗</th>
         <th>Blq</th><th>Png</th><th>Ace</th>
@@ -2981,8 +3173,11 @@ function showDeleteAllDataDialog(){
 async function deleteAllData(){
   state = defaultState();
   setArchive = [];
+  setSnapshots = {};
+  liveSetNum = 1;
   undoStack = [];
   redoStack = [];
+  undoRedoBySet = {};
   lastAutoServe = null;
   cameFromMatch = false;
   activeTab = 'court';
@@ -3207,6 +3402,13 @@ function applyVoiceSynonyms(text){
    ("setenta e um") ou por extenso ("71"), para marcar direto. */
 const VOICE_CODE_ACTION_MAP = {1:'ataqueCerto', 2:'pingada', 3:'bloqueio', 4:'ace', 5:'ataqueErrado', 6:'saqueErrado', 7:'passeErrado', 8:'infracao'};
 
+/* mapa de códigos usado SÓ nas combinações "nome + código"/"código + nome"
+   (ex.: "João 10", "10 João") — independente da tabela posição*10+ação
+   acima. 1=ataque, 2=pingada, 3=bloqueio, 4=ace, 10=ataque errado,
+   20=saque errado, 30=passe errado, 40=infração. */
+const NAME_CODE_ACTION_MAP = {1:'ataqueCerto', 2:'pingada', 3:'bloqueio', 4:'ace', 10:'ataqueErrado', 20:'saqueErrado', 30:'passeErrado', 40:'infracao'};
+const NAME_CODE_VALID_DIGITS = Object.keys(NAME_CODE_ACTION_MAP).map(Number);
+
 const VOICE_NUMBER_WORDS = {
   'zero':0,'um':1,'uma':1,'dois':2,'duas':2,'tres':3,'quatro':4,'cinco':5,'seis':6,'sete':7,'oito':8,'nove':9,
   'dez':10,'onze':11,'doze':12,'treze':13,'catorze':14,'quatorze':14,'quinze':15,
@@ -3264,19 +3466,24 @@ function tryVoiceCodeCommand(rawNormText, rawText){
   return true;
 }
 
-// interpreta uma palavra como o dígito de uma ação (1 a 8, em algarismo ou
-// por extenso — reaproveita VOICE_NUMBER_WORDS); retorna null se não for
+// interpreta uma palavra como o código de uma ação nas combinações
+// "nome + código" (em algarismo ou por extenso — reaproveita
+// VOICE_NUMBER_WORDS); válido apenas para os códigos de NAME_CODE_ACTION_MAP
+// (1,2,3,4,10,20,30,40); retorna null se não for
 function parseActionDigitToken(word){
-  if(/^[1-8]$/.test(word)) return parseInt(word, 10);
+  if(/^-?\d{1,2}$/.test(word)){
+    const n = parseInt(word, 10);
+    return NAME_CODE_VALID_DIGITS.includes(n) ? n : null;
+  }
   const val = VOICE_NUMBER_WORDS[word];
-  if(val!==undefined && val>=1 && val<=8) return val;
+  if(val!==undefined && NAME_CODE_VALID_DIGITS.includes(val)) return val;
   return null;
 }
 
 // reconhece as combinações "nome do jogador + código da ação" (ex.: "joao 1")
-// e "código da ação + nome do jogador" (ex.: "1 joao"), onde o código é o
-// mesmo dígito de ação (1 a 8) da tabela: 1=ataque, 2=pingada, 3=bloqueio,
-// 4=ace, 5=ataque errado, 6=saque errado, 7=passe errado, 8=infração.
+// e "código da ação + nome do jogador" (ex.: "1 joao"), onde o código segue
+// NAME_CODE_ACTION_MAP: 1=ataque, 2=pingada, 3=bloqueio, 4=ace,
+// 10=ataque errado, 20=saque errado, 30=passe errado, 40=infração.
 // Retorna true se reconheceu o padrão (marcou a ação ou avisou erro do
 // jogador), false se a fala não tem essa forma (código só na ponta).
 function tryVoiceNameCodeCommand(text, rawText){
@@ -3298,7 +3505,7 @@ function tryVoiceNameCodeCommand(text, rawText){
   }
   if(nameWords.length===0) return false;
 
-  const actionKey = VOICE_CODE_ACTION_MAP[actionDigit];
+  const actionKey = NAME_CODE_ACTION_MAP[actionDigit];
   const found = findPlayerByVoiceName(nameWords.join(' '));
   if(!found){
     showToast('Não entendi o jogador em: "' + rawText + '"');
@@ -3647,12 +3854,15 @@ function applyAction(team, player, actionKey){
   }
 
   player.stats[actionKey] += 1;
-  speak(actionDef.title + ' ' + player.name);
+  speak((actionDef.speakTitle || actionDef.title) + ' ' + player.name);
 
   // marca quem efetuou o último ponto — só quando o próprio jogador pontuou
   // diretamente (ataque certo, pingada, bloqueio, ace); erros dão ponto ao
   // adversário, então ninguém "efetuou" o ponto nesse caso
   state.lastScorerPlayerId = actionDef.pt>0 ? player.id : null;
+  // marca quem cometeu o último erro (ataque errado, saque errado, passe
+  // errado, infração) — o inverso do último ponto certo
+  state.lastErrorPlayerId = actionDef.pt<0 ? player.id : null;
 
   const winningTeam = actionDef.pt>0 ? team : (team==='A'?'B':'A');
   logEvent(team, player, actionDef.title, winningTeam, actionDef.key);
@@ -3662,6 +3872,7 @@ function applyAction(team, player, actionKey){
 function quickPoint(team){
   pushUndoSnapshot();
   state.lastScorerPlayerId = null; // ponto direto não tem jogador específico associado
+  state.lastErrorPlayerId = null;
   logEvent(team, {name:'Ponto direto'}, 'Ponto direto', team, null);
   speak('Ponto direto ' + teamDisplayName(slotTeam(team)));
   awardPoint(team, true); // exceção: "+1 direto" não exige saque confirmado antes
@@ -3673,6 +3884,8 @@ function logEvent(actingTeam, player, label, winningTeam, actionKey){
     team: actingTeam,
     playerId: player.id || null,
     playerName: player.name,
+    pos: player.pos || null, // posição do jogador no momento da ação — usada para
+                              // reconstruir corretamente as estatísticas do set (ver buildSetPlayerRows)
     label: label,
     actionKey: actionKey || null,
     winningTeam: winningTeam,
@@ -3751,9 +3964,35 @@ function archiveFinishedSet(a, b){
     teamBName: teamDisplayName(teamB),
     scoreA: a,
     scoreB: b,
-    teamAPlayers: teamA.players.map(p=>({name:p.name, pos:p.pos, stats: statsForPlayerInSet(p.id, state.setNum)})),
-    teamBPlayers: teamB.players.map(p=>({name:p.name, pos:p.pos, stats: statsForPlayerInSet(p.id, state.setNum)}))
+    teamAPlayers: buildSetPlayerRows('A', state.setNum, teamA.players),
+    teamBPlayers: buildSetPlayerRows('B', state.setNum, teamB.players)
   });
+}
+
+/* Refaz a entrada arquivada (usada nas telas "Sets encerrados" e no PDF) de
+   um set já fechado, a partir do state ATUAL — chamada antes de sair de um
+   set fechado que estava sendo visitado/editado pela caixa de seleção, pra
+   manter o resumo em dia com qualquer correção feita nele. */
+function resyncArchivedSet(setNum){
+  const entry = setArchive.find(s=> s.setNum===setNum);
+  if(!entry) return;
+  const teamA = slotTeam('A'), teamB = slotTeam('B');
+  entry.scoreA = state.score.A;
+  entry.scoreB = state.score.B;
+  entry.teamAPlayers = buildSetPlayerRows('A', setNum, teamA.players);
+  entry.teamBPlayers = buildSetPlayerRows('B', setNum, teamB.players);
+}
+
+/* Deriva setsHistory / setsWonA / setsWonB (o resuminho "X sets a Y" da
+   partida) a partir do setArchive — a fonte única da verdade pra esses
+   totais — em vez de confiar na cópia que ficou congelada dentro de cada
+   snapshot de set, que pode ter ficado desatualizada depois de uma edição
+   feita num set já fechado (por exemplo, se ela virou o placar do set). */
+function recomputeMatchSummaryFields(){
+  const sorted = setArchive.slice().sort((a,b)=> a.setNum-b.setNum);
+  state.setsHistory = sorted.map(s=> ({a:s.scoreA, b:s.scoreB}));
+  state.setsWonA = sorted.filter(s=> s.scoreA>s.scoreB).length;
+  state.setsWonB = sorted.filter(s=> s.scoreB>s.scoreA).length;
 }
 
 function finishSet(){
@@ -3768,7 +4007,17 @@ function finishSet(){
   archiveFinishedSet(a,b); // guarda o set (placar + estatísticas) no histórico de sets encerrados,
                             // já que a partida em si é infinita — só os sets se encerram e trocam
 
+  setSnapshots[state.setNum] = clone(state); // guarda o state completo desse set (placar, saque, rodízio,
+                                              // histórico até aqui) — pra poder reabrir e editar depois
+                                              // pela caixa de seleção, sem perder nada
+
+  undoRedoBySet[state.setNum] = {undo: undoStack, redo: redoStack}; // guarda a pilha de desfazer/refazer
+                                                                     // desse set — o novo set começa com a dele própria, vazia
+  undoStack = [];
+  redoStack = [];
+
   state.setNum += 1;
+  liveSetNum = state.setNum; // o novo set passa a ser o "em andamento"
   state.score = {A:0,B:0};
   // quem saca o novo set é definido automaticamente, alternando com o set anterior
   resetRotation();
@@ -3783,11 +4032,61 @@ function finishSet(){
 }
 
 function showEndSetDialog(){
+  if(state.setNum !== liveSetNum){
+    showToast('Volte para o set em andamento (pela caixa de seleção) para poder encerrá-lo.');
+    return;
+  }
   const a = state.score.A, b = state.score.B;
   showConfirmDialog(`Tem certeza que deseja encerrar o Set ${state.setNum} (placar ${a}–${b}) e avançar para o próximo set?`, ()=>{
     pushUndoSnapshot();
     finishSet();
   });
+}
+
+/* Caixa de seleção "Visitar set": deixa abrir qualquer set já encerrado (ou
+   voltar para o set em andamento) sem perder NADA de nenhum lado — tudo o
+   que está no set que está sendo deixado (fechado ou em andamento) é
+   salvo em setSnapshots antes de trocar, e qualquer edição feita num set
+   fechado é sincronizada de volta com o resumo arquivado (Sets encerrados
+   / PDF) ao sair dele. */
+function switchToSet(targetSetNum){
+  targetSetNum = Number(targetSetNum);
+  if(!targetSetNum || targetSetNum === state.setNum) return;
+
+  const leavingSetNum = state.setNum;
+  if(leavingSetNum !== liveSetNum) resyncArchivedSet(leavingSetNum); // só sets fechados têm entrada arquivada pra sincronizar
+  setSnapshots[leavingSetNum] = clone(state); // salva o set que está sendo deixado, com tudo que foi feito nele
+  undoRedoBySet[leavingSetNum] = {undo: undoStack, redo: redoStack}; // guarda a pilha de desfazer/refazer desse set
+
+  const target = setSnapshots[targetSetNum];
+  if(!target){
+    showToast('Não foi possível abrir o Set ' + targetSetNum + '.');
+    return;
+  }
+
+  state = clone(target);
+  lastAutoServe = null;
+  const savedStacks = undoRedoBySet[targetSetNum];
+  undoStack = savedStacks ? savedStacks.undo : []; // cada set tem a própria pilha — "Desfazer"/"Refazer" continuam funcionando ao visitar um set encerrado
+  redoStack = savedStacks ? savedStacks.redo : [];
+  recomputeMatchSummaryFields();
+  markDirty();
+  switchTab('court');
+  renderAll();
+  showToast('Abrindo o Set ' + targetSetNum + (targetSetNum===liveSetNum ? ' (em andamento).' : '.'));
+}
+
+/* Preenche a caixa de seleção com um item por set: os já encerrados (em
+   ordem) e, por último, o "em andamento" — que é sempre o liveSetNum. */
+function renderSetSwitcher(){
+  const sel = $('#setSwitcher');
+  if(!sel) return;
+  const closed = setArchive.slice().sort((a,b)=> a.setNum-b.setNum);
+  const opts = closed
+    .filter(s=> s.setNum !== liveSetNum && setSnapshots[s.setNum]) // só lista sets que realmente têm um snapshot pra abrir (partidas salvas antes dessa função existir não têm)
+    .map(s=> `<option value="${s.setNum}" ${state.setNum===s.setNum?'selected':''}>Set ${s.setNum} (${s.scoreA}–${s.scoreB})</option>`);
+  opts.push(`<option value="${liveSetNum}" ${state.setNum===liveSetNum?'selected':''}>Set ${liveSetNum} (em andamento)</option>`);
+  sel.innerHTML = opts.join('');
 }
 
 function showConfirmDialog(message, onConfirm){
@@ -3854,6 +4153,7 @@ $('#btnUndo').addEventListener('click', performUndo);
 $('#btnRedo').addEventListener('click', performRedo);
 
 $('#btnEndSet').addEventListener('click', showEndSetDialog);
+$('#setSwitcher').addEventListener('change', e=> switchToSet(e.target.value));
 
 function showToast(msg){
   const t = document.createElement('div');
